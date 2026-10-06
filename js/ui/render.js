@@ -245,6 +245,8 @@ function renderStepper(state, sts) {
     clear(dot);
     if (done[i]) dot.append(icon('ok', { size: 16 })); else dot.textContent = num(i + 1);
     li.querySelector('.step-state').textContent = t(done[i] ? 'step.done' : i === current ? 'step.current' : 'step.todo');
+    const card = document.getElementById(a.getAttribute('href').slice(1))?.closest('.card');
+    if (card) { card.classList.toggle('is-done', done[i]); card.classList.toggle('is-current', i === current); }
   }
 }
 
