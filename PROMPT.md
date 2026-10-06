@@ -119,3 +119,19 @@ isn't submitted yet, remind me I can still submit it until T+95 with a 10-mark p
 
 There are some issues in the current implementation, carefully analyze each and every one of the issues I'm noting down below, then first validate that they are actually there and after that implement the solution to each of the issues without breaking any other logics or connected parts. The issues are: 1. The sample file automatically loads in the initial opening of the page, that should not happen, also that sample file does not get reset when the reset button is clicked, make sure it properly resets the file and the sample does not load initially, the sample must only load if the user wants to and clicks on the sample load button, also reset button should properly clear the Tender Details section, it currently holds on to the sample value that loads initially. 2. The dropdown for selecting matched file should have a much more enhanced design, it's just a simple dropdown now, it should have some custom designs and most importantly it should dynamically remove the already selected files in other documents, currently it shows the selected ones as well. 3. The expiry date picker is the default one, make sure it is enhanced with a customised high quality date picker. Also run a parallal design plan agent which will analyze the entire site and figure out all the UI UX flaws and find the best possible places to include subtle animations, graphics, minimal dual tinted icons and other similar design upgrades, then create the design migration plan in a new md file for later execution.
 
+## #3 — 2026-10-06 18:07
+
+
+
+<pasted_content id="ab26">
+I have another agent currently working on this project, so I don't want you to make any
+  changes to any of the files in this project repository. I am currently in the contest and I
+  want you to analyze the entire project along with the '/Users/sharifrafid/Projects/devfest-VC0
+  02-242-15-480/AI_DevFest_Vibe_Coding_Rulebook_pwIsanM.pdf' and the '/Users/sharifrafid/Project
+  s/devfest-VC002-242-15-480/AIDevFest-ViveCoding_ProblemStatement.pdf', and do a deep analysis
+  to figure out any critical flaws or issues that the previous agents missed, or any improvement
+  options or advanced features that will surely make this project stand out.
+</pasted_content id="ab26">
+
+ After your analysis create a detailed md file with all your findings make sure to keep the most critical ones at the top and optional improvements in the bottom, write the md file itself as a prompt structure so that I can later get it executed.
+

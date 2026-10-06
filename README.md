@@ -33,8 +33,8 @@ There is no build step. pdf-lib is loaded from the jsDelivr CDN.
 |---|---|
 | 4.1 Load the list | Open `requirements.json` (file picker or drag-and-drop). The app shows the tender details and the documents sorted by `order` (ties sorted by `id`). The app starts empty. The sample loads only when you click **Load sample** (sample requirements and all sample files). Invalid JSON or schema errors are all listed, and the previous data is kept. |
 | 4.2 Upload files | Upload many PDFs at once (picker or drop). Each file shows its name, page count and size. Non-PDFs (wrong extension or no `%PDF-` header), empty files, more than 30 files or more than 50 MB total are rejected with a clear message. Every file has **Remove**. |
-| 4.3 Match files | Each required document has a dropdown of uploaded files. A document gets one file and a file goes to one document; picking a used file moves it. **Clear** undoes a match. |
-| 4.4 Expiry dates | A date field appears when the document has `has_expiry` and a file is matched. |
+| 4.3 Match files | Each required document has a custom accessible file picker (keyboard, type-ahead, page count, size and duplicate badge per file). It lists only free files: files matched to another document, and their same-content duplicates, are left out. So a document gets one file and a file goes to one document. **Clear** undoes a match. |
+| 4.4 Expiry dates | A custom date picker appears when the document has `has_expiry` and a file is matched. You can type `YYYY-MM-DD` or `DD/MM/YYYY` (Bangla digits work too), or pick from a calendar (Saturday-first, Bangla month and digit names). In the calendar, dates before the deadline (which would be Expired) are tinted red and the deadline day is ringed, with a text legend. Invalid typing shows an error and keeps the last valid date. |
 | 4.5 Check everything | Each document shows exactly one status: `Missing`, `Expiry date needed`, `Expired`, `Not provided` or `OK`, with colour, icon and text. Statuses update on every change. Expiring on the deadline day counts as OK. |
 | 4.6 Duplicates | Files are compared by SHA-256 of their content, so name doesn't matter. Duplicates get a badge in the file list, and the app refuses to match copies to different documents. |
 | 4.7 Make the package | **Generate** stays disabled while any document is blocking, and the reasons are listed. The output is a cover page, then documents in `order` with all their pages; optional documents without a file are skipped. Every page has the footer `<tender_id> \| Page X of Y`. |
@@ -60,7 +60,6 @@ Also included: **Reset**, a full start-over that clears the requirements and ten
 - On rotated source pages (90/180/270°) the footer is placed correctly, but the seal corner is chosen in the page's unrotated coordinates.
 - Expiry dates are typed in by the user; the app doesn't read them from the PDF (task 4.4).
 - The bonus "AI help" is not implemented. The app needs no network except the pdf-lib CDN and the optional fonts.
-- The browser's date picker shows dates in its own locale format (for example dd/mm/yyyy). Dates are stored as `YYYY-MM-DD`.
 - Password-protected detection was tested with a hand-made `/Encrypt` PDF, not with a real encrypted bank document.
 
 ### Assumptions
@@ -99,6 +98,7 @@ These were taken from the live site.
 - `js/core/validate.js` parses and validates `requirements.json` (strips BOM, checks the schema and real dates) and returns i18n error keys.
 - `js/core/status.js` holds the Section 5 rules as one pure function. Dates are compared as `YYYY-MM-DD` strings, so timezones don't matter.
 - `js/core/match.js` has pure functions that return new Maps for the matching rules, the duplicate guard and auto-match suggestions.
+- `js/core/dates.js` parses typed dates and builds the calendar grid. `js/ui/fileselect.js` and `js/ui/datepicker.js` are the custom picker components.
 - `js/core/csv.js` builds the checklist CSV with escaping.
 - `js/core/files.js` checks the PDF type, magic bytes and limits. `js/core/hash.js` computes SHA-256 with Web Crypto.
 - `js/core/package.js` builds the PDF with pdf-lib. It lays out the cover and index, copies all pages, extends each page's box downwards, and draws the footer with the final total.

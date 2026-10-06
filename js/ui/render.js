@@ -1,10 +1,14 @@
 // Renders the whole UI from state. Called after every change.
-import { t, num } from '../i18n.js';
+import { t, num, getLang } from '../i18n.js';
 import { STATUS, canGenerate } from '../core/status.js';
 import { findDuplicates, reqOfFile } from '../core/match.js';
 import { MAX_FILES, MAX_TOTAL_BYTES } from '../core/files.js';
 import { packageFileName } from '../core/package.js';
 import { h, clear, $ } from './dom.js';
+import { fileSelect } from './fileselect.js';
+import { datePicker } from './datepicker.js';
+
+const DP_KEYS = ['open', 'prev', 'next', 'today', 'clear', 'placeholder', 'deadline', 'expiredHint', 'okHint', 'invalid', 'yearLabel', 'monthLabel'];
 import { docTitle, reqById, statuses } from './app.js';
 
 export const STATUS_META = new Map([
@@ -120,6 +124,9 @@ function renderChecklist(state, actions, sts) {
   summary.textContent = t('check.summary', { ok, blocking, np, total: sts.length });
 
   const usable = [...state.files.values()].filter((f) => !f.error);
+  const usedIds = new Set(state.matches.values());
+  const dupIds = new Set();
+  for (const ids of findDuplicates([...state.files.values()]).values()) for (const id of ids) dupIds.add(id);
   const head = ['check.colOrder', 'check.colDoc', 'check.colFile', 'check.colExpiry', 'check.colStatus', 'check.colAction'];
   const table = h('table', { class: 'checklist' },
     h('thead', null, h('tr', null, head.map((k) => h('th', { scope: 'col', text: t(k) })))),
@@ -127,22 +134,40 @@ function renderChecklist(state, actions, sts) {
       const st = stById.get(req.id);
       const title = docTitle(req);
       const fid = state.matches.get(req.id) || '';
-      const sel = h('select', { 'aria-label': t('check.selectAria', { doc: title }), dataset: { fkey: `sel-${req.id}` },
-        onchange: (e) => actions.setMatch(req.id, e.target.value) },
-      h('option', { value: '', text: t('check.noneOption') }),
-      usable.map((f) => {
-        const other = reqOfFile(state.matches, f.id);
-        let label = `${f.name} (${fmtPages(f.pages)})`;
-        if (other && other !== req.id) label += ` ${t('check.used', { doc: docTitle(reqById(other)) })}`;
-        return h('option', { value: f.id, text: label });
-      }));
-      sel.value = fid;
+      // Only offer files that are free: not matched to another document, and not a duplicate
+      // (same content) of a file matched to another document. The row's own file always stays.
+      const takenHashes = new Set();
+      for (const [r, id] of state.matches) {
+        if (r === req.id) continue;
+        const mf = state.files.get(id);
+        if (mf && mf.hash) takenHashes.add(mf.hash);
+      }
+      const choices = usable.filter((f) => f.id === fid || (!usedIds.has(f.id) && !(f.hash && takenHashes.has(f.hash))));
+      const sel = fileSelect({
+        value: fid,
+        options: choices.map((f) => ({
+          value: f.id, name: f.name, meta: `${fmtPages(f.pages)} · ${fmtSize(f.size)}`,
+          badge: dupIds.has(f.id) ? t('files.duplicate') : undefined,
+        })),
+        ariaLabel: t('check.selectAria', { doc: title }),
+        noneLabel: t('check.noneOption'),
+        emptyLabel: t('check.noFreeFiles'),
+        fkey: `sel-${req.id}`,
+        onChange: (v) => actions.setMatch(req.id, v),
+      });
       let expiry;
       if (!req.has_expiry) expiry = h('span', { class: 'muted', text: t('check.noExpiry') });
       else if (!fid) expiry = h('span', { class: 'muted', 'aria-hidden': 'true', text: '—' });
       else {
-        expiry = h('input', { type: 'date', value: state.expiries.get(req.id) || '', 'aria-label': t('check.expiryAria', { doc: title }),
-          dataset: { fkey: `exp-${req.id}` }, onchange: (e) => actions.setExpiry(req.id, e.target.value) });
+        expiry = datePicker({
+          value: state.expiries.get(req.id) || '',
+          onChange: (v) => actions.setExpiry(req.id, v),
+          ariaLabel: t('check.expiryAria', { doc: title }),
+          lang: getLang(),
+          deadline: state.data.tender.submission_deadline,
+          labels: Object.fromEntries(DP_KEYS.map((k) => [k, t(`dp.${k}`)])),
+          fkey: `exp-${req.id}`,
+        });
       }
       const prev = state.prevStatus.get(req.id);
       const changed = prev !== undefined && prev !== st.status;
