@@ -224,6 +224,30 @@ function renderGenerate(state, sts) {
   else if (state.genResult) res.append(h('p', { class: state.genResult.kind === 'ok' ? 'success' : 'error-msg', text: t(state.genResult.key, state.genResult.params) }));
 }
 
+// ---------- progress stepper (header) ----------
+function renderStepper(state, sts) {
+  const ol = $('stepper');
+  if (!ol) return;
+  const done = [
+    !!state.data,
+    [...state.files.values()].some((f) => !f.error),
+    !!state.data && canGenerate(sts),
+    !!state.genResult && state.genResult.kind === 'ok',
+  ];
+  const current = done.indexOf(false);
+  for (const li of ol.querySelectorAll('li[data-step]')) {
+    const i = Number(li.dataset.step) - 1;
+    const a = li.querySelector('a');
+    const dot = li.querySelector('.step-dot');
+    li.classList.toggle('is-done', done[i]);
+    li.classList.toggle('is-current', i === current);
+    if (i === current) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current');
+    clear(dot);
+    if (done[i]) dot.append(icon('ok', { size: 16 })); else dot.textContent = num(i + 1);
+    li.querySelector('.step-state').textContent = t(done[i] ? 'step.done' : i === current ? 'step.current' : 'step.todo');
+  }
+}
+
 export function renderAll(state, actions) {
   const focusKey = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.fkey : null;
   const sts = statuses();
@@ -232,6 +256,7 @@ export function renderAll(state, actions) {
   renderChecklist(state, actions, sts);
   renderLegend();
   renderGenerate(state, sts);
+  renderStepper(state, sts);
   state.prevStatus = new Map(sts.map((s) => [s.id, s.status]));
   if (focusKey) {
     const el = document.querySelector(`[data-fkey="${CSS.escape(focusKey)}"]`);

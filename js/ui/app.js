@@ -11,7 +11,7 @@ import { $ } from './dom.js';
 import { renderAll } from './render.js';
 import { initSeal, getSealOption, sealDebug, resetSeal } from './seal.js';
 import { renderBanglaPng } from './bntext.js';
-import { fillIconSlots } from './icons.js';
+import { fillIconSlots, icon } from './icons.js';
 
 export const state = {
   data: null,               // {tender, requirements}
@@ -62,10 +62,24 @@ function showMsg() {
   // Re-set on next tick so screen readers announce repeated messages too.
   setTimeout(() => { live.textContent = text; }, 30);
   const toast = $('toast');
-  toast.textContent = text;
+  toast.textContent = '';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'toast-close';
+  close.setAttribute('aria-label', t('toast.close'));
+  close.append(icon('close', { size: 18 }));
+  close.addEventListener('click', () => { toast.hidden = true; });
+  const msg = document.createElement('span');
+  msg.className = 'toast-text';
+  msg.textContent = text;
+  toast.append(icon(lastMsg.kind === 'error' ? 'warning' : lastMsg.kind === 'ok' ? 'ok' : 'info', { size: 20 }), msg, close);
   toast.className = `toast toast-${lastMsg.kind}`;
   toast.hidden = false;
+  // Info/success toasts fade away after a while; errors stay until closed.
+  clearTimeout(toastTimer);
+  if (lastMsg.kind !== 'error') toastTimer = setTimeout(() => { toast.hidden = true; }, 6000);
 }
+let toastTimer = 0;
 
 export function render() {
   renderAll(state, actions);

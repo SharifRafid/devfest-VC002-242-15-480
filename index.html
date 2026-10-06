@@ -42,7 +42,15 @@
       </div>
     </div>
     <div class="wrap">
-      <p class="steps" data-i18n="app.steps"></p>
+      <p class="sr-only" data-i18n="app.steps"></p>
+      <nav data-i18n-aria="step.nav">
+        <ol class="stepper" id="stepper">
+          <li data-step="1"><a href="#h-req"><span class="step-dot" aria-hidden="true">1</span><span data-i18n="step.1"></span> <span class="sr-only step-state"></span></a></li>
+          <li data-step="2"><a href="#h-files"><span class="step-dot" aria-hidden="true">2</span><span data-i18n="step.2"></span> <span class="sr-only step-state"></span></a></li>
+          <li data-step="3"><a href="#h-check"><span class="step-dot" aria-hidden="true">3</span><span data-i18n="step.3"></span> <span class="sr-only step-state"></span></a></li>
+          <li data-step="4"><a href="#h-gen"><span class="step-dot" aria-hidden="true">4</span><span data-i18n="step.4"></span> <span class="sr-only step-state"></span></a></li>
+        </ol>
+      </nav>
       <p class="privacy" data-i18n="app.privacy"></p>
     </div>
   </header>

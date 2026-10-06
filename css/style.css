@@ -320,3 +320,42 @@ details.seal[open] > summary { margin-bottom: 6px; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .btn:active:not(:disabled), .drop.drag { transform: none; }
 }
+
+/* Progress stepper (replaces the long steps sentence) */
+.stepper { list-style: none; margin: 12px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; counter-reset: none; }
+.stepper a {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; min-height: 40px;
+  color: #d6e2f0; text-decoration: none; font-size: .92rem; font-weight: 600;
+  background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.18);
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+.stepper a:hover { background: rgba(255,255,255,.14); color: #fff; }
+.step-dot {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 50%; font-size: .85rem; font-weight: 700;
+  background: rgba(255,255,255,.14); color: #fff; border: 1.5px solid rgba(255,255,255,.5);
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.step-dot .ico { --ico-2: #fff; --ico-2-op: 0; animation: pop .2s ease-out; }
+.stepper .is-done .step-dot { background: #2f8a4c; border-color: #8fd3a6; }
+.stepper .is-done a { color: #fff; }
+.stepper .is-current a { background: #fff; color: var(--brand-900); border-color: #fff; }
+.stepper .is-current .step-dot { background: var(--primary); border-color: var(--primary); }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 760px) {
+  .tagline { font-size: .9rem; }
+  .stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { .step-dot .ico { animation: none !important; } }
+
+/* Toast: icon + text + close */
+.toast { display: flex; align-items: flex-start; gap: 10px; }
+.toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast > .ico { margin-top: 2px; }
+.toast-ok { --ico-2: var(--ok-bd); }
+.toast-error { --ico-2: var(--bad-bd); }
+.toast-close {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: -4px -6px -4px 0;
+  border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; transition: background-color .12s ease;
+}
+.toast-close:hover { background: rgba(0,0,0,.08); }
