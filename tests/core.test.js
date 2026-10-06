@@ -33,6 +33,22 @@ test('lenient requirements: numeric-string order, string/number booleans, deadli
   assert.deepEqual(ok.data.requirements.map((x) => [x.id, x.order, x.mandatory, x.has_expiry]), [['B', 1, true, false], ['A', 2, true, false]]);
 });
 
+test('lenient requirements: missing flags/title/order/optional tender fields get defaults, numeric id is text', () => {
+  const r = parseRequirements(JSON.stringify({
+    tender: { tender_id: 2026, submission_deadline: '2026-10-20' },
+    requirements: [
+      { id: 'A', title_en: 'a' },
+      { id: 'B', order: 1, title_bn: 'খ', has_expiry: true },
+    ],
+  }));
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  assert.equal(r.data.tender.tender_id, '2026');
+  assert.equal(r.data.tender.bidder, '');
+  assert.deepEqual(r.data.requirements.map((x) => [x.id, x.order, x.title_en, x.mandatory, x.has_expiry]),
+    [['A', 1, 'a', true, false], ['B', 1, 'খ', true, true]]);
+  assert.equal(parseRequirements(JSON.stringify({ tender: { title: 'T' }, requirements: [{ id: 'A' }] })).ok, false, 'tender_id and deadline stay required');
+});
+
 test('cover text: needsImage detects non-Latin text; wrapText wraps long values and hard-breaks long words', () => {
   assert.equal(needsImage('Meghna Tech Solutions Ltd.'), false);
   assert.equal(needsImage('“quoted” – dash'), false);

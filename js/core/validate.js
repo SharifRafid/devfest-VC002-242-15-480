@@ -17,6 +17,8 @@ export function stripBom(text) {
 }
 
 const TENDER_FIELDS = ['tender_id', 'title', 'procuring_entity', 'bidder', 'submission_deadline'];
+// Only these two are essential (file name, footer, status rules); the others may be empty.
+const REQUIRED_TENDER_FIELDS = ['tender_id', 'submission_deadline'];
 
 // Lenient readers for the unseen pack: numeric strings and "true"/"false"/1/0 are accepted.
 export function coerceNumber(v) {
@@ -62,8 +64,11 @@ export function parseRequirements(text) {
       const m = /^\s*(\d{4}-\d{2}-\d{2})(?:[T ].*)?$/.exec(tender.submission_deadline);
       if (m && isValidDate(m[1])) tender.submission_deadline = m[1];
     }
+    // Numbers are accepted as text (e.g. "tender_id": 2026); missing optional fields become ''.
     for (const f of TENDER_FIELDS) {
-      if (typeof tender[f] !== 'string' || tender[f].trim() === '') {
+      if (typeof tender[f] === 'number' && Number.isFinite(tender[f])) tender[f] = String(tender[f]);
+      if (typeof tender[f] !== 'string') tender[f] = '';
+      if (tender[f].trim() === '' && REQUIRED_TENDER_FIELDS.includes(f)) {
         errors.push({ key: 'err.tender.field', params: { field: f } });
       }
     }
@@ -87,7 +92,15 @@ export function parseRequirements(text) {
         return;
       }
       // Tolerate small format drift ("3" for order, "true"/1 for booleans) instead of refusing the file.
-      const r = { ...raw, order: coerceNumber(raw.order), mandatory: coerceBool(raw.mandatory), has_expiry: coerceBool(raw.has_expiry) };
+      // Missing fields get safe defaults instead of refusing the whole file: a listed document is
+      // required unless said otherwise, has no expiry unless said so, and keeps its list position as order.
+      const missing = (v) => v === undefined || v === null;
+      const r = {
+        ...raw,
+        order: missing(raw.order) ? n : coerceNumber(raw.order),
+        mandatory: missing(raw.mandatory) ? true : coerceBool(raw.mandatory),
+        has_expiry: missing(raw.has_expiry) ? false : coerceBool(raw.has_expiry),
+      };
       let bad = false;
       if (typeof r.id !== 'string' || r.id.trim() === '') {
         errors.push({ key: 'err.req.id', params: { n } }); bad = true;
@@ -97,8 +110,9 @@ export function parseRequirements(text) {
       if (typeof r.order !== 'number' || !Number.isFinite(r.order)) {
         errors.push({ key: 'err.req.order', params: { n } }); bad = true;
       }
+      // No English title: fall back to the Bangla title, then to the id.
       if (typeof r.title_en !== 'string' || r.title_en.trim() === '') {
-        errors.push({ key: 'err.req.title', params: { n } }); bad = true;
+        r.title_en = typeof r.title_bn === 'string' && r.title_bn.trim() !== '' ? r.title_bn : String(r.id ?? '');
       }
       if (typeof r.mandatory !== 'boolean') {
         errors.push({ key: 'err.req.bool', params: { n, field: 'mandatory' } }); bad = true;
