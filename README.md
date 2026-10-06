@@ -93,6 +93,7 @@ These were taken from the live site.
 | All problems resolved, Generate enabled | [03_ready_to_generate_en.png](screenshots/03_ready_to_generate_en.png) |
 | Mobile, 360 px | [04_mobile_360.png](screenshots/04_mobile_360.png) |
 | PDF cover / index with Bangla / footer | [05](screenshots/05_pdf_cover.png) · [06](screenshots/06_pdf_index_bangla.png) · [07](screenshots/07_pdf_last_page_footer.png) |
+| Validity date found in the file, with the Use this date button (sticky header above) | [08_validity_date_found.jpg](screenshots/08_validity_date_found.jpg) |
 
 ## How It Works
 
