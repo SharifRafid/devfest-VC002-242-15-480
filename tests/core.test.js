@@ -137,4 +137,6 @@ test('auto-match suggests by file name without double-using duplicates', () => {
   assert.ok(!(used.includes('2') && used.includes('3')));
   assert.ok(!used.includes('4'));
   assert.equal(reqOfFile(new Map([['R1', '1']]), '1'), 'R1');
+  const s2 = suggestMatches(data.requirements, [{ id: 'o', name: 'trade_license_2025.pdf', hash: 'o' }, { id: 'n', name: 'trade_license_2026.pdf', hash: 'n' }], new Map());
+  assert.equal(s2[0].fileId, 'n');
 });

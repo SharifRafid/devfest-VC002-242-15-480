@@ -101,7 +101,8 @@ export function suggestMatches(requirements, files, matches) {
       if (s >= 0.5) cands.push({ reqId: r.id, fileId: f.id, score: s, name: f.name, hash: f.hash });
     }
   }
-  cands.sort((a, b) => (b.score - a.score) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0) || (a.reqId < b.reqId ? -1 : 1));
+  // Ties: prefer the name that sorts last with numeric collation (e.g. *_2026 over *_2025, the newer version).
+  cands.sort((a, b) => (b.score - a.score) || b.name.localeCompare(a.name, 'en', { numeric: true }) || (a.reqId < b.reqId ? -1 : 1));
   const out = [];
   const doneReq = new Set();
   for (const c of cands) {
