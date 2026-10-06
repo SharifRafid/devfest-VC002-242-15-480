@@ -11,6 +11,7 @@ import { $ } from './dom.js';
 import { renderAll } from './render.js';
 import { initSeal, getSealOption, sealDebug, resetSeal } from './seal.js';
 import { renderBanglaPng } from './bntext.js';
+import { fillIconSlots } from './icons.js';
 
 export const state = {
   data: null,               // {tender, requirements}
@@ -471,6 +472,7 @@ function init() {
   const qsLang = new URLSearchParams(location.search).get('lang');
   if (qsLang === 'en' || qsLang === 'bn') setLang(qsLang);
   applyStatic();
+  fillIconSlots();
   updateLangButtons();
   for (const b of document.querySelectorAll('.lang-btn')) {
     b.addEventListener('click', () => {

@@ -57,13 +57,13 @@
       <h2 id="h-req" data-i18n="req.heading"></h2>
       <p class="help" data-i18n="req.help"></p>
       <label class="drop" id="req-drop" for="req-input">
-        <span class="drop-icon" aria-hidden="true">📄</span>
+        <span class="drop-icon ico-slot" data-icon="json" data-size="28" aria-hidden="true"></span>
         <span data-i18n="req.drop"></span>
         <input id="req-input" class="visually-hidden-input" type="file" accept=".json,application/json" data-i18n-aria="req.dropAria">
       </label>
       <div class="btn-row">
-        <button type="button" id="btn-sample" class="btn" data-i18n="req.loadSample" data-i18n-title="req.loadSampleAria"></button>
-        <button type="button" id="btn-reset" class="btn btn-ghost" data-i18n="req.reset" data-i18n-title="req.resetAria"></button>
+        <button type="button" id="btn-sample" class="btn" data-i18n-title="req.loadSampleAria"><span class="ico-slot" data-icon="sample" aria-hidden="true"></span><span data-i18n="req.loadSample"></span></button>
+        <button type="button" id="btn-reset" class="btn btn-ghost" data-i18n-title="req.resetAria"><span class="ico-slot" data-icon="reset" aria-hidden="true"></span><span data-i18n="req.reset"></span></button>
       </div>
       <div id="req-errors" class="errors" hidden role="alert"></div>
       <div id="tender"></div>
@@ -74,7 +74,7 @@
       <h2 id="h-files" data-i18n="files.heading"></h2>
       <p class="help" id="files-help"></p>
       <label class="drop" id="files-drop" for="files-input">
-        <span class="drop-icon" aria-hidden="true">📎</span>
+        <span class="drop-icon ico-slot" data-icon="pdf" data-size="28" aria-hidden="true"></span>
         <span data-i18n="files.drop"></span>
         <input id="files-input" class="visually-hidden-input" type="file" multiple accept=".pdf,application/pdf" data-i18n-aria="files.dropAria">
       </label>
@@ -88,8 +88,8 @@
       <h2 id="h-check" data-i18n="check.heading"></h2>
       <p class="help" data-i18n="check.help"></p>
       <div class="btn-row">
-        <button type="button" id="btn-auto" class="btn" data-i18n="check.autoMatch"></button>
-        <button type="button" id="btn-csv" class="btn btn-ghost" data-i18n="csv.button" data-i18n-title="csv.buttonAria"></button>
+        <button type="button" id="btn-auto" class="btn"><span class="ico-slot" data-icon="auto" aria-hidden="true"></span><span data-i18n="check.autoMatch"></span></button>
+        <button type="button" id="btn-csv" class="btn btn-ghost" data-i18n-title="csv.buttonAria"><span class="ico-slot" data-icon="csv" aria-hidden="true"></span><span data-i18n="csv.button"></span></button>
       </div>
       <p id="check-summary" class="summary"></p>
       <div id="checklist"></div>
@@ -109,7 +109,7 @@
         <p class="help" data-i18n="seal.intro"></p>
         <div class="field">
           <input type="file" id="seal-input" class="visually-hidden-input" accept="image/png" aria-describedby="seal-file-help">
-          <label for="seal-input" class="btn seal-pick"><span aria-hidden="true">🖼 </span><span data-i18n="seal.fileLabel"></span></label>
+          <label for="seal-input" class="btn seal-pick"><span class="ico-slot" data-icon="seal" aria-hidden="true"></span><span data-i18n="seal.fileLabel"></span></label>
           <p id="seal-file-help" class="help small" data-i18n="seal.fileHelp"></p>
         </div>
         <div id="seal-preview" class="seal-preview" hidden>
@@ -135,7 +135,7 @@
       </details>
       <div id="gen-reasons"></div>
       <div class="btn-row">
-        <button type="button" id="btn-generate" class="btn btn-primary" data-i18n="gen.button" aria-describedby="gen-reasons"></button>
+        <button type="button" id="btn-generate" class="btn btn-primary" aria-describedby="gen-reasons"><span class="ico-slot" data-icon="download" aria-hidden="true"></span><span data-i18n="gen.button"></span></button>
       </div>
       <div id="gen-result" role="status"></div>
     </section>

@@ -7,22 +7,23 @@ import { packageFileName } from '../core/package.js';
 import { h, clear, $ } from './dom.js';
 import { fileSelect } from './fileselect.js';
 import { datePicker } from './datepicker.js';
+import { icon, illo } from './icons.js';
 
 const DP_KEYS = ['open', 'prev', 'next', 'today', 'clear', 'placeholder', 'deadline', 'expiredHint', 'okHint', 'invalid', 'yearLabel', 'monthLabel'];
 import { docTitle, reqById, statuses } from './app.js';
 
 export const STATUS_META = new Map([
-  [STATUS.OK, { icon: '✓', cls: 'ok', legend: 'legend.ok' }],
-  [STATUS.MISSING, { icon: '✕', cls: 'missing', legend: 'legend.missing' }],
-  [STATUS.EXPIRY_NEEDED, { icon: '⏰', cls: 'needed', legend: 'legend.expiryNeeded' }],
-  [STATUS.EXPIRED, { icon: '⚠', cls: 'expired', legend: 'legend.expired' }],
-  [STATUS.NOT_PROVIDED, { icon: '–', cls: 'np', legend: 'legend.notProvided' }],
+  [STATUS.OK, { icon: 'ok', cls: 'ok', legend: 'legend.ok' }],
+  [STATUS.MISSING, { icon: 'missing', cls: 'missing', legend: 'legend.missing' }],
+  [STATUS.EXPIRY_NEEDED, { icon: 'calendar', cls: 'needed', legend: 'legend.expiryNeeded' }],
+  [STATUS.EXPIRED, { icon: 'expired', cls: 'expired', legend: 'legend.expired' }],
+  [STATUS.NOT_PROVIDED, { icon: 'np', cls: 'np', legend: 'legend.notProvided' }],
 ]);
 
 export function statusBadge(status) {
   const m = STATUS_META.get(status);
   return h('span', { class: `badge badge-${m.cls}` },
-    h('span', { class: 'badge-icon', 'aria-hidden': 'true', text: m.icon }),
+    icon(m.icon, { size: 16 }),
     h('span', { text: t(`status.${status}`) }));
 }
 
@@ -47,7 +48,7 @@ function renderRequirements(state) {
   } else errBox.hidden = true;
 
   const box = clear($('tender'));
-  if (!state.data) { box.append(h('p', { class: 'empty', text: t('req.none') })); return; }
+  if (!state.data) { box.append(h('p', { class: 'empty' }, illo('requirements'), h('span', { text: t('req.none') }))); return; }
   const tn = state.data.tender;
   const fields = ['tender_id', 'title', 'procuring_entity', 'bidder', 'submission_deadline'];
   box.append(h('h3', { text: t('tender.heading') }),
@@ -67,13 +68,13 @@ function renderFiles(state, actions) {
         h('h3', { text: t('files.rejectedTitle') }),
         h('button', { type: 'button', class: 'btn btn-small btn-ghost', text: t('files.clearRejected'), onclick: actions.clearRejected })),
       h('ul', null, state.rejected.map((r) => h('li', null,
-        h('span', { class: 'badge badge-missing' }, h('span', { 'aria-hidden': 'true', text: '✕' })),
+        h('span', { class: 'badge badge-missing' }, icon('missing', { size: 16 })),
         ' ', h('span', { text: t(r.err.key, { name: r.name, ...r.err.params }) }))))));
   }
 
   const box = clear($('files'));
   const files = [...state.files.values()];
-  if (!files.length) { box.append(h('p', { class: 'empty', text: t('files.empty') })); return; }
+  if (!files.length) { box.append(h('p', { class: 'empty' }, illo('files'), h('span', { text: t('files.empty') }))); return; }
   let total = 0;
   for (const f of files) total += f.size;
   box.append(h('p', { class: 'muted', text: t('files.count', { n: files.length, size: fmtSize(total) }) }));
@@ -86,9 +87,9 @@ function renderFiles(state, actions) {
     const reqId = reqOfFile(state.matches, f.id);
     const req = reqId ? reqById(reqId) : null;
     const badges = [];
-    if (f.error) badges.push(h('span', { class: 'badge badge-expired' }, h('span', { 'aria-hidden': 'true', text: '⚠' }), h('span', { text: t(f.error.key, f.error.params) })));
+    if (f.error) badges.push(h('span', { class: 'badge badge-expired' }, icon('warning', { size: 16 }), h('span', { text: t(f.error.key, f.error.params) })));
     if (dupOf.has(f.id)) {
-      badges.push(h('span', { class: 'badge badge-dup' }, h('span', { 'aria-hidden': 'true', text: '⧉' }), h('span', { text: t('files.duplicate') })));
+      badges.push(h('span', { class: 'badge badge-dup' }, icon('duplicate', { size: 16 }), h('span', { text: t('files.duplicate') })));
     }
     return h('li', { class: `file${f.error ? ' file-bad' : ''}` },
       h('div', { class: 'file-main' },
@@ -111,7 +112,7 @@ function renderChecklist(state, actions, sts) {
   $('btn-csv').disabled = !state.data;
   if (!state.data) {
     summary.textContent = '';
-    box.append(h('p', { class: 'empty', text: t('check.none') }));
+    box.append(h('p', { class: 'empty' }, illo('checklist'), h('span', { text: t('check.none') })));
     return;
   }
   const stById = new Map(sts.map((s) => [s.id, s]));
@@ -191,7 +192,7 @@ function renderLegend() {
   const ul = clear($('legend'));
   for (const [status, m] of STATUS_META) ul.append(h('li', null, statusBadge(status), h('span', { text: t(m.legend) })));
   ul.append(h('li', null,
-    h('span', { class: 'badge badge-dup' }, h('span', { 'aria-hidden': 'true', text: '⧉' }), h('span', { text: t('files.duplicate') })),
+    h('span', { class: 'badge badge-dup' }, icon('duplicate', { size: 16 }), h('span', { text: t('files.duplicate') })),
     h('span', { text: t('legend.duplicate') })));
 }
 
@@ -216,7 +217,7 @@ function renderGenerate(state, sts) {
           const req = reqById(s.id);
           return h('li', null, statusBadge(s.status), ' ', h('span', { text: `${docTitle(req)}: ${t(`status.${s.status}`)}` }));
         }))));
-    } else reasons.append(h('p', { class: 'ready', text: `✓ ${t('gen.ready')}` }));
+    } else reasons.append(h('p', { class: 'ready' }, icon('ok', { size: 22 }), h('span', { text: t('gen.ready') })));
   }
   const res = clear($('gen-result'));
   if (state.generating) res.append(h('p', { class: 'busy' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), h('span', { text: t('gen.building') })));
