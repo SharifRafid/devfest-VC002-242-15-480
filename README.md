@@ -59,6 +59,9 @@ Also included: **Reset** (clears all matches and dates, keeps the loaded files),
 - Cover text uses Helvetica, so characters outside Latin-1 in tender fields print as `?`. The cover is in English as 6.1 requires. Bangla document titles appear on the index page as images.
 - On rotated source pages (90/180/270°) the footer is placed correctly, but the seal corner is chosen in the page's unrotated coordinates.
 - Expiry dates are typed in by the user; the app doesn't read them from the PDF (task 4.4).
+- The bonus "AI help" is not implemented. The app needs no network except the pdf-lib CDN and the optional fonts.
+- The browser's date picker shows dates in its own locale format (for example dd/mm/yyyy). Dates are stored as `YYYY-MM-DD`.
+- Password-protected detection was tested with a hand-made `/Encrypt` PDF, not with a real encrypted bank document.
 
 ### Assumptions
 
@@ -69,6 +72,8 @@ Also included: **Reset** (clears all matches and dates, keeps the loaded files),
 - Loading a new valid `requirements.json` clears matches and dates, and keeps the uploaded files.
 - Requirements with the same `order` are sorted by `id`, so the result is always the same.
 - A missing `title_bn` falls back to `title_en`.
+- Changing or clearing a match also clears that document's expiry date, so an old date never stays attached to a different file.
+- **Load sample** replaces the current files with the sample pack, so clicking it twice doesn't create duplicates.
 - For the sample output, `scan_0042.pdf` (an image scan of the signed declaration) is matched to *Signed Declaration*. `trade_license_2025.pdf` (expired 2025-06-30) is left out in favour of `trade_license_2026.pdf`. The duplicate `experience_cert (1).pdf` isn't used.
 
 ## Output Files
