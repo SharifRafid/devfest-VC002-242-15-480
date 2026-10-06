@@ -381,3 +381,7 @@ details.seal[open] > summary { margin-bottom: 6px; }
 .site-header.is-scrolled h1 { font-size: 1.25rem; margin-bottom: 0; }
 /* Expired detail under the status badge */
 .status-detail { display: block; font-size: .85rem; color: var(--bad-fg); margin-top: 4px; }
+
+/* Suggested expiry date found inside the PDF text */
+.exp-wrap { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.found-date { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .85rem; color: var(--muted); }

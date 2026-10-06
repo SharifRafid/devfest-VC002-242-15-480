@@ -6,6 +6,7 @@ import { assign, unassign, removeFileMatch, reqOfFile, suggestMatches } from '..
 import { checkPdfFile, checkLimits, checkJsonFile } from '../core/files.js';
 import { sha256Hex } from '../core/hash.js';
 import { inspectPdf, buildPackage, packageFileName } from '../core/package.js';
+import { extractText, findExpiryDate } from '../core/pdftext.js';
 import { toCsv, CSV_BOM, checklistFileName, csvDate } from '../core/csv.js';
 import { $ } from './dom.js';
 import { renderAll } from './render.js';
@@ -164,8 +165,13 @@ async function addFiles(fileList) {
         if (info.ok) pages = info.pages;
         else error = { key: info.key, params: {} };
       }
+      // Bonus: look for a printed validity date ("valid until ...") to suggest as the expiry date.
+      let foundExpiry = null;
+      if (!error) {
+        try { const found = findExpiryDate(await extractText(bytes)); foundExpiry = found ? found.iso : null; } catch { foundExpiry = null; }
+      }
       const id = `f${nextId++}`;
-      state.files.set(id, { id, name: file.name, size: file.size, pages, hash, bytes, error });
+      state.files.set(id, { id, name: file.name, size: file.size, pages, hash, bytes, error, foundExpiry });
       added++;
       if (error) unusable++;
     } catch {

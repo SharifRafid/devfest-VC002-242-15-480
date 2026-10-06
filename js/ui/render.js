@@ -6,7 +6,7 @@ import { MAX_FILES, MAX_TOTAL_BYTES } from '../core/files.js';
 import { packageFileName } from '../core/package.js';
 import { h, clear, $ } from './dom.js';
 import { fileSelect } from './fileselect.js';
-import { datePicker } from './datepicker.js';
+import { datePicker, formatFriendly } from './datepicker.js';
 import { daysBetween } from '../core/dates.js';
 import { icon, illo } from './icons.js';
 
@@ -181,6 +181,15 @@ function renderChecklist(state, actions, sts) {
           labels: Object.fromEntries(DP_KEYS.map((k) => [k, t(`dp.${k}`)])),
           fkey: `exp-${req.id}`,
         });
+        const mf = state.files.get(fid);
+        if (mf && mf.foundExpiry && state.expiries.get(req.id) !== mf.foundExpiry) {
+          expiry = h('div', { class: 'exp-wrap' }, expiry,
+            h('span', { class: 'found-date' },
+              h('span', { text: t('check.dateFound', { date: formatFriendly(mf.foundExpiry, getLang()) }) }),
+              h('button', { type: 'button', class: 'btn btn-small', text: t('check.useDate'),
+                'aria-label': t('check.useDateAria', { doc: title }), dataset: { fkey: `use-${req.id}` },
+                onclick: () => actions.setExpiry(req.id, mf.foundExpiry) })));
+        }
       }
       const prev = state.prevStatus.get(req.id);
       const changed = prev !== undefined && prev !== st.status;
