@@ -6,7 +6,7 @@ import { assign, unassign, removeFileMatch, reqOfFile, suggestMatches } from '..
 import { checkPdfFile, checkLimits, checkJsonFile } from '../core/files.js';
 import { sha256Hex } from '../core/hash.js';
 import { inspectPdf, buildPackage, packageFileName } from '../core/package.js';
-import { toCsv, CSV_BOM, checklistFileName } from '../core/csv.js';
+import { toCsv, CSV_BOM, checklistFileName, csvDate } from '../core/csv.js';
 import { $ } from './dom.js';
 import { renderAll } from './render.js';
 import { initSeal, getSealOption, sealDebug, resetSeal } from './seal.js';
@@ -357,7 +357,7 @@ function exportCsv() {
     const f = state.files.get(state.matches.get(req.id));
     const st = stById.get(req.id);
     rows.push([String(req.order), docTitle(req), f ? f.name : '', f && f.pages != null ? String(f.pages) : '',
-      req.has_expiry ? state.expiries.get(req.id) || '' : '', t(`status.${st.status}`)]);
+      req.has_expiry ? csvDate(state.expiries.get(req.id)) : '', t(`status.${st.status}`)]);
   }
   const name = checklistFileName(state.data.tender.tender_id);
   try {
@@ -551,6 +551,15 @@ function init() {
   $('btn-csv').addEventListener('click', exportCsv);
   $('btn-generate').addEventListener('click', generate);
   initSeal(announce);
+
+  // Sticky header: publish its height for the toast/anchors, and compact it on small screens when scrolled.
+  const header = document.querySelector('.site-header');
+  if (header) {
+    const setH = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+    if (window.ResizeObserver) new ResizeObserver(setH).observe(header);
+    setH();
+    window.addEventListener('scroll', () => { header.classList.toggle('is-scrolled', window.scrollY > 24); }, { passive: true });
+  }
 
   // Start empty: the sample is loaded only when the user clicks "Load sample".
   render();

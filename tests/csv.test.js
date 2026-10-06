@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toCsv, csvCell, checklistFileName } from '../js/core/csv.js';
+import { toCsv, csvCell, checklistFileName, csvDate } from '../js/core/csv.js';
 
 test('csvCell quotes commas, quotes and newlines', () => {
   assert.equal(csvCell('plain'), 'plain');
@@ -26,4 +26,11 @@ test('toCsv joins rows with CRLF and keeps Bangla text', () => {
 
 test('checklistFileName', () => {
   assert.equal(checklistFileName('T-1'), 'T-1_Checklist.csv');
+});
+
+test('dates are exported as Excel-safe DD/MM/YYYY text cells', () => {
+  assert.equal(csvCell(csvDate('2027-06-30')), '"=""30/06/2027"""');
+  assert.equal(csvDate(''), '');
+  assert.equal(csvDate('2027-6-30'), '');
+  assert.equal(toCsv([['a', csvDate('2026-12-31')]]), 'a,"=""31/12/2026"""\r\n');
 });
