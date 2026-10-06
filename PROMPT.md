@@ -155,3 +155,7 @@ Don't make any changes to this project or create or edit any files anywhere, jus
 
 Make all the critical changes and verify end to end, we have got extended time and I still have 30 minutes to finish it up.
 
+## #9 — 2026-10-06 19:01
+
+I still have exactly 20 minutes left, I want to implement the bonus optional AI feature so that the user can use their own API url and API key for claude (keep it for claude at the moment) and get basic features and functionalities related to AI like summary of their changes current issues in their files etc, dont send the files through the APIs only send the requirements and file names and extensions so that the API doesnt get overloaded. And make sure that this AI feature does not affect any other functionality.
+

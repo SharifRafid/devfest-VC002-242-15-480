@@ -53,6 +53,7 @@ Also included: a sticky header with the progress stepper (compact on small scree
 - **Bangla text shown correctly on the cover and index page:** each `title_bn` is drawn by the browser on a canvas, which shapes conjuncts properly, and embedded as an image next to the English title on the index page. The same renderer is used on the cover for any tender field or file name that Helvetica can't show (for example a Bangla bidder name), so nothing degrades to `?`. pdf-lib can't shape Bangla on its own.
 - **Export checklist as CSV:** downloads `<tender_id>_Checklist.csv` with order, document, file name, pages, expiry date and status, in the selected language. The file is UTF-8 with BOM so Excel opens it correctly, cells are protected against formula injection, and expiry dates are plain `YYYY-MM-DD` text, so the file reads the same in Excel, LibreOffice, Google Sheets and a text editor.
 - **Validity date read from the PDF (extra):** when a matched file prints a validity date ("VALID UNTIL ... 2027-06-30", "valid till 31/12/2026"), the app shows *Validity date found in the file* next to the expiry field with a **Use this date** button. It never fills the date by itself (task 4.4 stays the user's decision). Implemented without a library: the content streams are decoded (ASCII85/Flate via the browser's `DecompressionStream`) and text operands are scanned; scans, encrypted files and subset-encoded fonts simply give no suggestion. Dates with only an issue date are not suggested.
+- **AI help with your own key (Rulebook 5.5):** an optional panel takes a Claude API URL, model and API key (kept in memory only, never saved) and asks for a short review of the checklist, or answers a question about it, in the selected language. Only metadata is sent: tender details, the document list with statuses, file names, extensions, page counts and expiry dates. File contents never leave the browser, and the app works fully without a key.
 - **Save and reopen work:** matches and expiry dates are saved automatically in localStorage per tender, with files identified by SHA-256 content hash. They are restored when the same requirements and files are loaded again. **Reset** also clears the saved work.
 
 ## Known Problems
@@ -60,7 +61,7 @@ Also included: a sticky header with the progress stepper (compact on small scree
 - The cover is in English as 6.1 requires; its labels use Helvetica. Tender values and file names outside Latin-1 are embedded as images (rendered by the browser), except in the page footer, where a non-Latin `tender_id` would print as `?`. Long values wrap inside the margins; a single very long word is hard-broken.
 - On rotated source pages (90/180/270°) the footer is placed correctly, but the seal corner is chosen in the page's unrotated coordinates.
 - Expiry dates are typed in by the user; the app doesn't read them from the PDF (task 4.4).
-- The bonus "AI help" is not implemented. The app needs no network except the pdf-lib CDN and the optional fonts.
+- AI help is off until you type a key. Without it the app needs no network except the optional fonts (pdf-lib is bundled). The AI answer is advice only; the checklist statuses stay the authority.
 - Password-protected detection was tested with a hand-made `/Encrypt` PDF, not with a real encrypted bank document.
 
 ### Assumptions

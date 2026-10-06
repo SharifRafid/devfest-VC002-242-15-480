@@ -147,6 +147,37 @@
       </div>
       <div id="gen-result" role="status"></div>
     </section>
+
+    <!-- 5. AI help (optional bonus, Rulebook 5.5): the user's own key, metadata only, never file contents -->
+    <section class="card card-ai" aria-labelledby="h-ai">
+      <h2 id="h-ai" data-i18n="ai.heading"></h2>
+      <p class="help" data-i18n="ai.intro"></p>
+      <div class="ai-grid">
+        <div class="field">
+          <label for="ai-url" data-i18n="ai.urlLabel"></label>
+          <input type="url" id="ai-url" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="ai-model" data-i18n="ai.modelLabel"></label>
+          <input type="text" id="ai-model" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="ai-key" data-i18n="ai.keyLabel"></label>
+          <input type="password" id="ai-key" autocomplete="off" aria-describedby="ai-key-help">
+          <p id="ai-key-help" class="help small" data-i18n="ai.keyHelp"></p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="ai-question" data-i18n="ai.questionLabel"></label>
+        <textarea id="ai-question" rows="2" data-i18n-placeholder="ai.questionPlaceholder"></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="ai-ask" class="btn"><span class="ico-slot" data-icon="auto" aria-hidden="true"></span><span data-i18n="ai.button"></span></button>
+        <button type="button" id="ai-clear" class="btn btn-ghost" data-i18n="ai.clear"></button>
+      </div>
+      <p id="ai-state" class="small muted" aria-live="polite"></p>
+      <div id="ai-answer" hidden></div>
+    </section>
   </main>
 
   <footer class="wrap site-footer">

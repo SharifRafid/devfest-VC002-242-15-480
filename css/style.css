@@ -385,3 +385,11 @@ details.seal[open] > summary { margin-bottom: 6px; }
 /* Suggested expiry date found inside the PDF text */
 .exp-wrap { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .found-date { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .85rem; color: var(--muted); }
+
+/* AI help panel (optional) */
+.ai-grid { display: grid; gap: 10px 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.card-ai .field { margin: 6px 0; }
+.card-ai .field label { display: block; font-weight: 600; margin-bottom: 4px; }
+.card-ai .field input, .card-ai .field textarea { width: 100%; max-width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1.5px solid #c9d3df; border-radius: 8px; font: inherit; background: #fff; }
+.card-ai .field textarea { resize: vertical; }
+.ai-text { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; background: #f6f8fb; border: 1px solid #e3e9f0; padding: 12px 14px; border-radius: 8px; margin: 6px 0; }

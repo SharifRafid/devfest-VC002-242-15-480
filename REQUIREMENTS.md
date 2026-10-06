@@ -39,7 +39,7 @@ Source: `AIDevFest-ViveCoding_ProblemStatement.pdf` (quotes verbatim). Type: **m
 | B5 | "Bangla text shown correctly on the PDF cover or index page." | bonus | js/core/package.js (+ fontkit + Bangla TTF) | — | Bangla titles render on index | done |
 | B6 | "Auto-match: suggest matches based on file names." | bonus | js/core/match.js (suggest) | tests/match.test.js | Suggests trade_license_2026 -> R01 etc. | done |
 | B7 | "Handle bad files safely: for damaged or password-protected PDFs, show a clear message instead of crashing." | bonus | js/ui/*.js (try/catch pdf.js load), js/core/package.js | — | Encrypted/damaged file -> message | done |
-| B8 | "AI help, using the user's own API key (Rulebook, Section 5.5)." | bonus | optional | — | Key typed in UI, app works without | skipped (time box; app works without AI) |
+| B8 | "AI help, using the user's own API key (Rulebook, Section 5.5)." | bonus | optional | — | Key typed in UI, app works without | done (optional panel; metadata only, key in memory) |
 
 ## Sample pack findings (verified with md5/pdfinfo/pdftotext)
 

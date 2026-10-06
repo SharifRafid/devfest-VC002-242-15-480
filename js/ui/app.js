@@ -13,6 +13,7 @@ import { renderAll } from './render.js';
 import { initSeal, getSealOption, sealDebug, resetSeal } from './seal.js';
 import { renderBanglaPng } from './bntext.js';
 import { fillIconSlots, icon } from './icons.js';
+import { initAi } from './ai.js';
 
 export const state = {
   data: null,               // {tender, requirements}
@@ -557,6 +558,8 @@ function init() {
   $('btn-csv').addEventListener('click', exportCsv);
   $('btn-generate').addEventListener('click', generate);
   initSeal(announce);
+  // Optional AI help: isolated so a failure here never affects the rest of the app.
+  try { initAi(() => ({ state, data: state.data, statuses: statuses() }), announce); } catch { /* AI help is optional */ }
 
   // Sticky header: publish its height for the toast/anchors, and compact it on small screens when scrolled.
   const header = document.querySelector('.site-header');
