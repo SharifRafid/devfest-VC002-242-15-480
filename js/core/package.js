@@ -88,11 +88,12 @@ function layoutText(blocks, fonts) {
     const font = b.bold ? fonts.bold : fonts.regular;
     const size = b.size || 11;
     const lh = Math.max(LINE, size * 1.35);
-    const lines = wrap(b.text, font, size, A4[0] - 2 * MARGIN - (b.indent || 0));
+    // Rows with a Bangla title image keep the English part in the left column.
+    const lines = wrap(b.text, font, size, b.img ? 230 : A4[0] - 2 * MARGIN - (b.indent || 0));
     if (b.gap) y += b.gap;
     for (const l of lines) {
       if (y + lh > usable) { pages.push([]); y = 0; }
-      pages[pages.length - 1].push({ text: l, font, size, y: y + size, indent: b.indent || 0, right: b.right ? safeText(b.right) : null });
+      pages[pages.length - 1].push({ text: l, font, size, y: y + size, indent: b.indent || 0, right: b.right ? safeText(b.right) : null, img: l === lines[0] ? b.img : null });
       y += lh;
     }
   }
@@ -105,6 +106,11 @@ function drawTextPages(out, laidOut, rgb) {
     for (const it of items) {
       const y = A4[1] - MARGIN - it.y;
       page.drawText(it.text, { x: MARGIN + it.indent, y, size: it.size, font: it.font, color: rgb(0.1, 0.1, 0.12) });
+      if (it.img) {
+        const h = it.size + 3;
+        const w = Math.min(h * it.img.ratio, 200);
+        page.drawImage(it.img.img, { x: MARGIN + 240, y: y - 3, width: w, height: w / it.img.ratio });
+      }
       if (it.right) {
         const w = it.font.widthOfTextAtSize(it.right, it.size);
         page.drawText(it.right, { x: A4[0] - MARGIN - w, y, size: it.size, font: it.font, color: rgb(0.1, 0.1, 0.12) });
@@ -115,7 +121,9 @@ function drawTextPages(out, laidOut, rgb) {
 }
 
 // items: [{req:{title_en}, file:{name, bytes, pages}}] already in package order.
-export async function buildPackage({ tender, items, generatedDate, PDFLib, includeIndex, seal = null }) {
+// bnRenderer (optional, browser only): async (text) -> {png: Uint8Array, width, height} rendered with
+// real Bangla shaping on a canvas, because pdf-lib cannot shape Bangla conjuncts itself.
+export async function buildPackage({ tender, items, generatedDate, PDFLib, includeIndex, seal = null, bnRenderer = null }) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const out = await PDFDocument.create();
   out.setTitle(safeText(`${tender.tender_id} Package`));
@@ -129,6 +137,16 @@ export async function buildPackage({ tender, items, generatedDate, PDFLib, inclu
   for (const it of items) {
     const src = await PDFDocument.load(it.file.bytes);
     sources.push({ it, src, pages: src.getPageCount() });
+  }
+  if (includeIndex && bnRenderer) {
+    for (const s of sources) {
+      const bn = s.it.req.title_bn;
+      if (!bn || bn === s.it.req.title_en) continue;
+      try {
+        const r = await bnRenderer(bn);
+        if (r && r.png) s.bnImg = { img: await out.embedPng(r.png), ratio: r.width / r.height };
+      } catch { /* Bangla title is optional; English stays */ }
+    }
   }
 
   const coverBlocks = (starts) => [
@@ -149,7 +167,7 @@ export async function buildPackage({ tender, items, generatedDate, PDFLib, inclu
   const indexBlocks = (starts) => [
     { text: 'Index', size: 22, bold: true },
     { text: 'Document', bold: true, gap: 18, right: 'Starts on page' },
-    ...sources.map((s, i) => ({ text: `${i + 1}. ${s.it.req.title_en}`, right: String(starts[i]), gap: i === 0 ? 6 : 0 })),
+    ...sources.map((s, i) => ({ text: `${i + 1}. ${s.it.req.title_en}`, right: String(starts[i]), gap: i === 0 ? 6 : 0, img: s.bnImg })),
   ];
 
   // Long titles can wrap, so the page counts of cover/index are computed from a dry layout.

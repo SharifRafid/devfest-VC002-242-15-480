@@ -50,12 +50,13 @@ Also included: **Reset** (clears all matches and dates, keeps the loaded files),
 - **Auto-match** that suggests matches from file names. It never matches duplicates or damaged files.
 - **Bad files handled safely:** damaged or password-protected PDFs show a clear message, can't be matched, and don't crash the app.
 - **Seal or signature:** upload a PNG and choose pages of the final package (`all` or a list like `1, 3-5`) and a corner. The image is drawn above the footer band.
+- **Bangla text shown correctly on the index page:** each `title_bn` is drawn by the browser on a canvas, which shapes conjuncts properly, and embedded as an image next to the English title. pdf-lib can't shape Bangla on its own.
 - **Export checklist as CSV:** downloads `<tender_id>_Checklist.csv` with order, document, file name, pages, expiry date and status, in the selected language. The file is UTF-8 with BOM so Excel opens it correctly, and cells are protected against formula injection.
 - **Save and reopen work:** matches and expiry dates are saved automatically in localStorage per tender, with files identified by SHA-256 content hash. They are restored when the same requirements and files are loaded again. **Reset** also clears the saved work.
 
 ## Known Problems
 
-- The PDF cover and index use Helvetica, so characters outside Latin-1 (for example Bangla in tender fields) print as `?`. The cover is in English as 6.1 requires.
+- Cover text uses Helvetica, so characters outside Latin-1 in tender fields print as `?`. The cover is in English as 6.1 requires. Bangla document titles appear on the index page as images.
 - On rotated source pages (90/180/270°) the footer is placed correctly, but the seal corner is chosen in the page's unrotated coordinates.
 - Expiry dates are typed in by the user; the app doesn't read them from the PDF (task 4.4).
 

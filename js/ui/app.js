@@ -10,6 +10,7 @@ import { toCsv, CSV_BOM, checklistFileName } from '../core/csv.js';
 import { $ } from './dom.js';
 import { renderAll } from './render.js';
 import { initSeal, getSealOption, sealDebug } from './seal.js';
+import { renderBanglaPng } from './bntext.js';
 
 export const state = {
   data: null,               // {tender, requirements}
@@ -414,6 +415,7 @@ async function generate() {
       tender: state.data.tender, items, generatedDate: today(), PDFLib: lib,
       includeIndex: $('opt-index').checked,
       seal: getSealOption(),
+      bnRenderer: renderBanglaPng,
     });
     const doc = await lib.PDFDocument.load(out);
     const pages = doc.getPageCount();
