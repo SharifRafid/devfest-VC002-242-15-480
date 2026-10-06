@@ -104,8 +104,8 @@
       <h2 id="h-gen" data-i18n="gen.heading"></h2>
       <div id="gen-info"></div>
       <label class="check"><input type="checkbox" id="opt-index" checked> <span data-i18n="gen.index"></span></label>
-      <fieldset class="seal">
-        <legend data-i18n="seal.heading"></legend>
+      <details class="seal">
+        <summary data-i18n="seal.heading"></summary>
         <p class="help" data-i18n="seal.intro"></p>
         <div class="field">
           <input type="file" id="seal-input" class="visually-hidden-input" accept="image/png" aria-describedby="seal-file-help">
@@ -132,11 +132,11 @@
             <option value="tl" data-i18n="seal.pos.tl"></option>
           </select>
         </div>
-      </fieldset>
+      </details>
+      <div id="gen-reasons"></div>
       <div class="btn-row">
         <button type="button" id="btn-generate" class="btn btn-primary" data-i18n="gen.button" aria-describedby="gen-reasons"></button>
       </div>
-      <div id="gen-reasons"></div>
       <div id="gen-result" role="status"></div>
     </section>
   </main>

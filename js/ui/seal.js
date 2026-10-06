@@ -34,6 +34,9 @@ export function renderSeal() {
   const box = $('seal-preview');
   if (!box) return;
   box.hidden = !seal.bytes;
+  // Keep the collapsible seal panel open while a seal is set, so it is never hidden from view.
+  const panel = box.closest('details');
+  if (panel && seal.bytes) panel.open = true;
   $('seal-name').textContent = seal.bytes ? seal.name : '';
   if (seal.bytes) $('seal-img').src = seal.url;
   else $('seal-img').removeAttribute('src');

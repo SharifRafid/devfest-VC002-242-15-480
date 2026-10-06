@@ -135,3 +135,7 @@ I have another agent currently working on this project, so I don't want you to m
 
  After your analysis create a detailed md file with all your findings make sure to keep the most critical ones at the top and optional improvements in the bottom, write the md file itself as a prompt structure so that I can later get it executed.
 
+## #4 — 2026-10-06 18:17
+
+Start executing the design plan, make sure to do it very carefully so that it does not affect any existing logic or change the entire workflow or functionality of any components, it must only update the UI UX and animations related stuff in the entire site.
+
