@@ -76,6 +76,19 @@ Also included: **Reset** (clears all matches and dates, keeps the loaded files),
 - `output/T-2026-0417_Package.pdf`: the package built from the sample pack after resolving its problems (17 pages: cover, index and 15 document pages).
 - `screenshots/`: app screenshots, including the document statuses.
 
+## Screenshots
+
+These were taken from the live site.
+
+| | |
+|---|---|
+| All five statuses (Expired, Expiry date needed, Missing, Not provided, OK) | ![statuses](screenshots/00_document_statuses_en.png) |
+| Full page, statuses, English | [01_statuses_en.png](screenshots/01_statuses_en.png) |
+| Full page, statuses, Bangla | [02_statuses_bn.png](screenshots/02_statuses_bn.png) |
+| All problems resolved, Generate enabled | [03_ready_to_generate_en.png](screenshots/03_ready_to_generate_en.png) |
+| Mobile, 360 px | [04_mobile_360.png](screenshots/04_mobile_360.png) |
+| PDF cover / index with Bangla / footer | [05](screenshots/05_pdf_cover.png) · [06](screenshots/06_pdf_index_bangla.png) · [07](screenshots/07_pdf_last_page_footer.png) |
+
 ## How It Works
 
 - `js/core/validate.js` parses and validates `requirements.json` (strips BOM, checks the schema and real dates) and returns i18n error keys.
