@@ -104,6 +104,7 @@ function renderChecklist(state, actions, sts) {
   const box = clear($('checklist'));
   const summary = $('check-summary');
   $('btn-auto').disabled = !state.data;
+  $('btn-csv').disabled = !state.data;
   if (!state.data) {
     summary.textContent = '';
     box.append(h('p', { class: 'empty', text: t('check.none') }));

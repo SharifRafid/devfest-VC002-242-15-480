@@ -6,6 +6,7 @@ import { assign, unassign, removeFileMatch, reqOfFile, suggestMatches } from '..
 import { checkPdfFile, checkLimits, checkJsonFile } from '../core/files.js';
 import { sha256Hex } from '../core/hash.js';
 import { inspectPdf, buildPackage, packageFileName } from '../core/package.js';
+import { toCsv, CSV_BOM, checklistFileName } from '../core/csv.js';
 import { $ } from './dom.js';
 import { renderAll } from './render.js';
 
@@ -24,6 +25,7 @@ export const state = {
 
 let nextId = 1;
 let lastMsg = null;
+let restoredN = 0; // matches restored by the last tryRestore()
 
 // ---------- helpers ----------
 export function docTitle(req) {
@@ -83,6 +85,7 @@ function loadRequirementsText(text) {
   state.genResult = null;
   render();
   announce('req.loaded', { n: res.data.requirements.length, id: res.data.tender.tender_id }, 'ok');
+  tryRestore();
   return true;
 }
 
@@ -117,6 +120,7 @@ async function addFiles(fileList) {
   render();
   let added = 0;
   let rejected = 0;
+  let unusable = 0;
   for (const file of list) {
     try {
       const buf = await file.arrayBuffer();
@@ -145,6 +149,7 @@ async function addFiles(fileList) {
       const id = `f${nextId++}`;
       state.files.set(id, { id, name: file.name, size: file.size, pages, hash, bytes, error });
       added++;
+      if (error) unusable++;
     } catch {
       state.rejected.push({ name: file.name, err: { key: 'err.file.read', params: {} } });
       rejected++;
@@ -153,7 +158,9 @@ async function addFiles(fileList) {
   state.busy = false;
   render();
   if (rejected) announce('files.addedRejected', { n: added, r: rejected }, added ? 'info' : 'error');
+  else if (unusable) announce('files.addedUnusable', { n: added, u: unusable }, 'error');
   else announce('files.added', { n: added }, 'ok');
+  if (added) tryRestore();
 }
 
 function removeFile(fileId) {
@@ -163,6 +170,7 @@ function removeFile(fileId) {
   state.matches = removeFileMatch(state.matches, fileId);
   if (reqId) state.expiries.delete(reqId);
   state.files.delete(fileId);
+  if (reqId) persist();
   render();
   const req = reqId ? reqById(reqId) : null;
   if (req) announce('files.removedUnmatched', { name: f.name, doc: docTitle(req) }, 'info');
@@ -184,6 +192,7 @@ function setMatch(reqId, fileId) {
   state.matches = res.matches;
   state.expiries.delete(reqId);
   if (res.movedFrom) state.expiries.delete(res.movedFrom);
+  persist();
   render();
   const file = state.files.get(fileId);
   const from = res.movedFrom ? reqById(res.movedFrom) : null;
@@ -200,6 +209,7 @@ function clearMatch(reqId) {
   }
   state.matches = unassign(state.matches, reqId);
   state.expiries.delete(reqId);
+  persist();
   render();
   announce('check.unmatched', { doc: docTitle(req) }, 'info');
 }
@@ -209,6 +219,7 @@ function setExpiry(reqId, value) {
   if (!req) return;
   if (!value) {
     state.expiries.delete(reqId);
+    persist();
     render();
     announce('check.expiryCleared', { doc: docTitle(req) }, 'info');
     return;
@@ -218,6 +229,7 @@ function setExpiry(reqId, value) {
     return;
   }
   state.expiries.set(reqId, value);
+  persist();
   render();
   announce('check.expirySet', { doc: docTitle(req), date: value }, 'ok');
 }
@@ -232,6 +244,7 @@ function autoMatch() {
     const res = assign(state.matches, s.reqId, s.fileId, state.files);
     if (res.ok) { state.matches = res.matches; n++; }
   }
+  if (n) persist();
   render();
   if (n) announce('check.autoMatched', { n }, 'ok');
   else announce('check.autoNone', {}, 'info');
@@ -240,12 +253,88 @@ function autoMatch() {
 function resetWork() {
   const m = state.matches.size;
   const e = state.expiries.size;
-  if (!m && !e) { announce('req.reset.nothing', {}, 'info'); return; }
+  const forgot = forgetSaved();
+  if (!m && !e) { announce(forgot ? 'req.reset.savedOnly' : 'req.reset.nothing', {}, 'info'); return; }
   state.matches = new Map();
   state.expiries = new Map();
   state.genResult = null;
   render();
   announce('req.reset.done', { m, e }, 'info');
+}
+
+// ---------- save & restore (localStorage, keyed by tender_id, files by SHA-256) ----------
+const SAVE_PREFIX = 'tpb.work.';
+function saveKey() { return state.data ? SAVE_PREFIX + state.data.tender.tender_id : null; }
+function reqSignature() { return state.data.requirements.map((r) => r.id).join('|'); }
+function persist() {
+  const key = saveKey();
+  if (!key) return;
+  try {
+    const matches = [];
+    for (const [reqId, fid] of state.matches) {
+      const f = state.files.get(fid);
+      if (f && f.hash) matches.push([reqId, f.hash]);
+    }
+    const expiries = [...state.expiries].filter(([reqId]) => state.matches.has(reqId));
+    if (!matches.length && !expiries.length) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify({ v: 1, sig: reqSignature(), matches, expiries }));
+  } catch { /* storage unavailable: work just isn't saved */ }
+}
+function forgetSaved() {
+  const key = saveKey();
+  if (!key) return false;
+  try {
+    const had = localStorage.getItem(key) !== null;
+    localStorage.removeItem(key);
+    return had;
+  } catch { return false; }
+}
+function tryRestore() {
+  const key = saveKey();
+  if (!key || state.matches.size || state.expiries.size || !state.files.size) return;
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch { return; }
+  if (!saved || saved.sig !== reqSignature() || !Array.isArray(saved.matches)) return;
+  const byHash = new Map();
+  for (const f of state.files.values()) if (!f.error && f.hash && !byHash.has(f.hash)) byHash.set(f.hash, f.id);
+  let n = 0;
+  for (const [reqId, hash] of saved.matches) {
+    const fid = byHash.get(hash);
+    if (!fid || !reqById(reqId)) continue;
+    const res = assign(state.matches, reqId, fid, state.files);
+    if (res.ok) { state.matches = res.matches; n++; }
+  }
+  if (!n) return;
+  restoredN = n;
+  for (const [reqId, date] of Array.isArray(saved.expiries) ? saved.expiries : []) {
+    if (state.matches.has(reqId) && isValidDate(date) && reqById(reqId).has_expiry) state.expiries.set(reqId, date);
+  }
+  render();
+  announce('work.restored', { n }, 'ok');
+}
+
+// ---------- export checklist CSV ----------
+function exportCsv() {
+  if (!state.data) { announce('gen.noData', {}, 'info'); return; }
+  const stById = new Map(statuses().map((s) => [s.id, s]));
+  const rows = [['csv.order', 'csv.document', 'csv.file', 'csv.pages', 'csv.expiry', 'csv.status'].map((k) => t(k))];
+  for (const req of state.data.requirements) {
+    const f = state.files.get(state.matches.get(req.id));
+    const st = stById.get(req.id);
+    rows.push([String(req.order), docTitle(req), f ? f.name : '', f && f.pages != null ? String(f.pages) : '',
+      req.has_expiry ? state.expiries.get(req.id) || '' : '', t(`status.${st.status}`)]);
+  }
+  const name = checklistFileName(state.data.tender.tender_id);
+  try {
+    const url = URL.createObjectURL(new Blob([CSV_BOM + toCsv(rows)], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    announce('csv.done', { name }, 'ok');
+  } catch {
+    announce('csv.failed', {}, 'error');
+  }
 }
 
 // ---------- sample pack ----------
@@ -273,9 +362,13 @@ async function loadSample() {
       files.push(new File([blob], name, { type: blob.type }));
     }
     state.files = new Map();
+    state.matches = new Map();
+    state.expiries = new Map();
     state.rejected = [];
+    restoredN = 0;
     await addFiles(files);
-    announce('sample.loaded', {}, 'ok');
+    if (restoredN) announce('work.restored', { n: restoredN }, 'ok');
+    else announce('sample.loaded', {}, 'ok');
   } catch {
     announce('sample.failed', {}, 'error');
   }
@@ -402,6 +495,7 @@ function init() {
   $('btn-sample').addEventListener('click', loadSample);
   $('btn-reset').addEventListener('click', resetWork);
   $('btn-auto').addEventListener('click', autoMatch);
+  $('btn-csv').addEventListener('click', exportCsv);
   $('btn-generate').addEventListener('click', generate);
 
   render();
@@ -409,7 +503,7 @@ function init() {
 
   const qs = new URLSearchParams(location.search);
   if (qs.has('debug')) {
-    window.__app = { state, actions, loadSample, autoMatch, setLang };
+    window.__app = { state, actions, loadSample, autoMatch, setLang, exportCsv, resetWork, addFiles, loadRequirementsFile };
     setInterval(() => { document.body.dataset.dbgWidth = `${innerWidth}/${document.documentElement.scrollWidth}`; }, 500);
     // ?debug=sample loads the full sample and auto-matches (used for headless checks).
     if (qs.get('debug') === 'sample') loadSample().then(autoMatch);

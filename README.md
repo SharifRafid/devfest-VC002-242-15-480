@@ -49,6 +49,8 @@ Also included: **Reset** (clears all matches and dates, keeps the loaded files),
 - **Index page** after the cover, showing the page where each document starts (checkbox, on by default).
 - **Auto-match** that suggests matches from file names. It never matches duplicates or damaged files.
 - **Bad files handled safely:** damaged or password-protected PDFs show a clear message, can't be matched, and don't crash the app.
+- **Export checklist as CSV:** downloads `<tender_id>_Checklist.csv` with order, document, file name, pages, expiry date and status, in the selected language. The file is UTF-8 with BOM so Excel opens it correctly, and cells are protected against formula injection.
+- **Save and reopen work:** matches and expiry dates are saved automatically in localStorage per tender, with files identified by SHA-256 content hash. They are restored when the same requirements and files are loaded again. **Reset** also clears the saved work.
 
 ## Known Problems
 
@@ -76,6 +78,7 @@ Also included: **Reset** (clears all matches and dates, keeps the loaded files),
 - `js/core/validate.js` parses and validates `requirements.json` (strips BOM, checks the schema and real dates) and returns i18n error keys.
 - `js/core/status.js` holds the Section 5 rules as one pure function. Dates are compared as `YYYY-MM-DD` strings, so timezones don't matter.
 - `js/core/match.js` has pure functions that return new Maps for the matching rules, the duplicate guard and auto-match suggestions.
+- `js/core/csv.js` builds the checklist CSV with escaping.
 - `js/core/files.js` checks the PDF type, magic bytes and limits. `js/core/hash.js` computes SHA-256 with Web Crypto.
 - `js/core/package.js` builds the PDF with pdf-lib. It lays out the cover and index, copies all pages, extends each page's box downwards, and draws the footer with the final total.
 - `js/i18n.js` holds the EN/BN dictionary (same keys, checked by a test). The `js/ui/*` modules keep the state in Maps and re-render after every change, using `textContent` only.
