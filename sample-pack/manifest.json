@@ -1,0 +1,16 @@
+{
+  "requirements": "requirements.json",
+  "documents": [
+    "documents/01_financial_proposal.pdf",
+    "documents/02_technical_proposal.pdf",
+    "documents/03_tin_certificate.pdf",
+    "documents/04_vat_certificate.pdf",
+    "documents/bank_solvency.pdf",
+    "documents/company_logo.png",
+    "documents/experience_cert (1).pdf",
+    "documents/experience_cert.pdf",
+    "documents/scan_0042.pdf",
+    "documents/trade_license_2025.pdf",
+    "documents/trade_license_2026.pdf"
+  ]
+}

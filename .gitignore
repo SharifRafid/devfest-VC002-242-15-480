@@ -6,3 +6,4 @@ node_modules/
 INIT_PROMPT.md
 *_Rulebook_*.pdf
 AIDevFest-ViveCoding_ProblemStatement.pdf
+.claude/last_prompt.txt
