@@ -1,0 +1,433 @@
+// App controller: state, actions and event wiring. Rendering lives in render.js.
+import { t, getLang, setLang, applyStatic } from '../i18n.js';
+import { parseRequirements, isValidDate } from '../core/validate.js';
+import { computeAll, canGenerate } from '../core/status.js';
+import { assign, unassign, removeFileMatch, reqOfFile, suggestMatches } from '../core/match.js';
+import { checkPdfFile, checkLimits, checkJsonFile } from '../core/files.js';
+import { sha256Hex } from '../core/hash.js';
+import { inspectPdf, buildPackage, packageFileName } from '../core/package.js';
+import { $ } from './dom.js';
+import { renderAll } from './render.js';
+
+export const state = {
+  data: null,               // {tender, requirements}
+  files: new Map(),         // id -> {id,name,size,pages,hash,bytes,error}
+  matches: new Map(),       // reqId -> fileId
+  expiries: new Map(),      // reqId -> 'YYYY-MM-DD'
+  rejected: [],             // [{name, err:{key,params}}]
+  reqErrors: [],            // [{key,params}]
+  busy: false,              // reading files
+  generating: false,
+  genResult: null,          // {kind:'ok'|'error', key, params}
+  prevStatus: new Map(),    // reqId -> status (for change highlight)
+};
+
+let nextId = 1;
+let lastMsg = null;
+
+// ---------- helpers ----------
+export function docTitle(req) {
+  return getLang() === 'bn' ? req.title_bn : req.title_en;
+}
+export function reqById(id) {
+  return state.data ? state.data.requirements.find((r) => r.id === id) || null : null;
+}
+export function statuses() {
+  if (!state.data) return [];
+  return computeAll(state.data.requirements, state.matches, state.expiries, state.data.tender.submission_deadline);
+}
+function pdfLib() {
+  return typeof window !== 'undefined' && window.PDFLib ? window.PDFLib : null;
+}
+function today() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+export function announce(key, params, kind = 'info') {
+  lastMsg = { key, params: params || {}, kind };
+  showMsg();
+}
+function showMsg() {
+  if (!lastMsg) return;
+  const text = t(lastMsg.key, lastMsg.params);
+  const live = $('live');
+  live.textContent = '';
+  // Re-set on next tick so screen readers announce repeated messages too.
+  setTimeout(() => { live.textContent = text; }, 30);
+  const toast = $('toast');
+  toast.textContent = text;
+  toast.className = `toast toast-${lastMsg.kind}`;
+  toast.hidden = false;
+}
+
+export function render() {
+  renderAll(state, actions);
+}
+
+// ---------- requirements ----------
+function loadRequirementsText(text) {
+  const res = parseRequirements(text);
+  if (!res.ok) {
+    state.reqErrors = res.errors;
+    render();
+    announce('req.errorsTitle', {}, 'error');
+    return false;
+  }
+  state.data = res.data;
+  state.reqErrors = [];
+  state.matches = new Map();
+  state.expiries = new Map();
+  state.prevStatus = new Map();
+  state.genResult = null;
+  render();
+  announce('req.loaded', { n: res.data.requirements.length, id: res.data.tender.tender_id }, 'ok');
+  return true;
+}
+
+async function loadRequirementsFile(file) {
+  const err = checkJsonFile({ name: file.name, size: file.size });
+  if (err) {
+    state.reqErrors = [err];
+    render();
+    announce(err.key, err.params, 'error');
+    return;
+  }
+  try {
+    loadRequirementsText(await file.text());
+  } catch {
+    state.reqErrors = [{ key: 'err.file.read', params: {} }];
+    render();
+    announce('err.file.read', {}, 'error');
+  }
+}
+
+// ---------- files ----------
+function totals() {
+  let bytes = 0;
+  for (const f of state.files.values()) bytes += f.size;
+  return { count: state.files.size, bytes };
+}
+
+async function addFiles(fileList) {
+  const list = Array.from(fileList || []);
+  if (!list.length) return;
+  state.busy = true;
+  render();
+  let added = 0;
+  let rejected = 0;
+  for (const file of list) {
+    try {
+      const buf = await file.arrayBuffer();
+      const header = new Uint8Array(buf.slice(0, 1024));
+      let err = checkPdfFile({ name: file.name, size: file.size, header });
+      if (!err) {
+        const { count, bytes } = totals();
+        err = checkLimits(count, bytes, file.size);
+      }
+      if (err) {
+        state.rejected.push({ name: file.name, err });
+        rejected++;
+        continue;
+      }
+      const bytes = new Uint8Array(buf);
+      const hash = await sha256Hex(buf);
+      let pages = null;
+      let error = null;
+      const lib = pdfLib();
+      if (!lib) error = { key: 'err.pdflib', params: {} };
+      else {
+        const info = await inspectPdf(bytes, lib);
+        if (info.ok) pages = info.pages;
+        else error = { key: info.key, params: {} };
+      }
+      const id = `f${nextId++}`;
+      state.files.set(id, { id, name: file.name, size: file.size, pages, hash, bytes, error });
+      added++;
+    } catch {
+      state.rejected.push({ name: file.name, err: { key: 'err.file.read', params: {} } });
+      rejected++;
+    }
+  }
+  state.busy = false;
+  render();
+  if (rejected) announce('files.addedRejected', { n: added, r: rejected }, added ? 'info' : 'error');
+  else announce('files.added', { n: added }, 'ok');
+}
+
+function removeFile(fileId) {
+  const f = state.files.get(fileId);
+  if (!f) return;
+  const reqId = reqOfFile(state.matches, fileId);
+  state.matches = removeFileMatch(state.matches, fileId);
+  if (reqId) state.expiries.delete(reqId);
+  state.files.delete(fileId);
+  render();
+  const req = reqId ? reqById(reqId) : null;
+  if (req) announce('files.removedUnmatched', { name: f.name, doc: docTitle(req) }, 'info');
+  else announce('files.removed', { name: f.name }, 'info');
+}
+
+// ---------- matching ----------
+function setMatch(reqId, fileId) {
+  const req = reqById(reqId);
+  if (!req) return;
+  if (!fileId) { clearMatch(reqId); return; }
+  if (state.matches.get(reqId) === fileId) return;
+  const res = assign(state.matches, reqId, fileId, state.files);
+  if (!res.ok) {
+    render(); // reverts the select
+    announce(res.error.key, res.error.params, 'error');
+    return;
+  }
+  state.matches = res.matches;
+  state.expiries.delete(reqId);
+  if (res.movedFrom) state.expiries.delete(res.movedFrom);
+  render();
+  const file = state.files.get(fileId);
+  const from = res.movedFrom ? reqById(res.movedFrom) : null;
+  if (from) announce('check.moved', { file: file.name, from: docTitle(from), doc: docTitle(req) }, 'ok');
+  else announce('check.matched', { file: file.name, doc: docTitle(req) }, 'ok');
+}
+
+function clearMatch(reqId) {
+  const req = reqById(reqId);
+  if (!req) return;
+  if (!state.matches.has(reqId)) {
+    announce('check.nothingToClear', { doc: docTitle(req) }, 'info');
+    return;
+  }
+  state.matches = unassign(state.matches, reqId);
+  state.expiries.delete(reqId);
+  render();
+  announce('check.unmatched', { doc: docTitle(req) }, 'info');
+}
+
+function setExpiry(reqId, value) {
+  const req = reqById(reqId);
+  if (!req) return;
+  if (!value) {
+    state.expiries.delete(reqId);
+    render();
+    announce('check.expiryCleared', { doc: docTitle(req) }, 'info');
+    return;
+  }
+  if (!isValidDate(value)) {
+    announce('check.expiryInvalid', {}, 'error');
+    return;
+  }
+  state.expiries.set(reqId, value);
+  render();
+  announce('check.expirySet', { doc: docTitle(req), date: value }, 'ok');
+}
+
+function autoMatch() {
+  if (!state.data) { announce('gen.noData', {}, 'info'); return; }
+  const files = [...state.files.values()];
+  if (!files.some((f) => !f.error)) { announce('check.autoNoFiles', {}, 'info'); return; }
+  const sugg = suggestMatches(state.data.requirements, files, state.matches);
+  let n = 0;
+  for (const s of sugg) {
+    const res = assign(state.matches, s.reqId, s.fileId, state.files);
+    if (res.ok) { state.matches = res.matches; n++; }
+  }
+  render();
+  if (n) announce('check.autoMatched', { n }, 'ok');
+  else announce('check.autoNone', {}, 'info');
+}
+
+function resetWork() {
+  const m = state.matches.size;
+  const e = state.expiries.size;
+  if (!m && !e) { announce('req.reset.nothing', {}, 'info'); return; }
+  state.matches = new Map();
+  state.expiries = new Map();
+  state.genResult = null;
+  render();
+  announce('req.reset.done', { m, e }, 'info');
+}
+
+// ---------- sample pack ----------
+async function fetchManifest() {
+  const url = new URL('sample-pack/manifest.json', location.href);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(String(res.status));
+  return { manifest: await res.json(), base: url };
+}
+
+async function loadSample() {
+  announce('sample.loading', {}, 'info');
+  try {
+    const { manifest, base } = await fetchManifest();
+    const reqRes = await fetch(new URL(manifest.requirements, base));
+    if (!reqRes.ok) throw new Error(String(reqRes.status));
+    if (!loadRequirementsText(await reqRes.text())) return;
+    const docs = Array.isArray(manifest.documents) ? manifest.documents : [];
+    const files = [];
+    for (const p of docs) {
+      const r = await fetch(new URL(p, base));
+      if (!r.ok) throw new Error(String(r.status));
+      const blob = await r.blob();
+      const name = decodeURIComponent(String(p).split('/').pop());
+      files.push(new File([blob], name, { type: blob.type }));
+    }
+    state.files = new Map();
+    state.rejected = [];
+    await addFiles(files);
+    announce('sample.loaded', {}, 'ok');
+  } catch {
+    announce('sample.failed', {}, 'error');
+  }
+}
+
+async function autoLoadRequirements() {
+  try {
+    const { manifest, base } = await fetchManifest();
+    const r = await fetch(new URL(manifest.requirements, base));
+    if (!r.ok) return;
+    const res = parseRequirements(await r.text());
+    if (res.ok && !state.data) { state.data = res.data; render(); }
+  } catch { /* first view just stays empty */ }
+}
+
+// ---------- generate ----------
+async function generate() {
+  if (!state.data || state.generating) return;
+  const sts = statuses();
+  if (!canGenerate(sts)) { render(); return; }
+  const lib = pdfLib();
+  if (!lib) {
+    state.genResult = { kind: 'error', key: 'err.pdflib', params: {} };
+    render();
+    announce('err.pdflib', {}, 'error');
+    return;
+  }
+  const items = [];
+  for (const req of state.data.requirements) {
+    const fid = state.matches.get(req.id);
+    if (!fid) continue;
+    const f = state.files.get(fid);
+    if (!f || f.error) continue;
+    items.push({ req, file: { name: f.name, bytes: f.bytes, pages: f.pages } });
+  }
+  state.generating = true;
+  state.genResult = null;
+  render();
+  announce('gen.building', {}, 'info');
+  try {
+    const out = await buildPackage({
+      tender: state.data.tender, items, generatedDate: today(), PDFLib: lib,
+      includeIndex: $('opt-index').checked,
+    });
+    const doc = await lib.PDFDocument.load(out);
+    const pages = doc.getPageCount();
+    const name = packageFileName(state.data.tender.tender_id);
+    const url = URL.createObjectURL(new Blob([out], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    state.genResult = { kind: 'ok', key: 'gen.done', params: { name, pages } };
+    state.generating = false;
+    render();
+    announce('gen.done', { name, pages }, 'ok');
+  } catch (e) {
+    state.generating = false;
+    state.genResult = { kind: 'error', key: 'err.generate', params: { msg: String((e && e.message) || e) } };
+    render();
+    announce('err.generate', state.genResult.params, 'error');
+  }
+}
+
+export const actions = { removeFile, setMatch, clearMatch, setExpiry, clearRejected() {
+  if (!state.rejected.length) return;
+  state.rejected = []; render();
+} };
+
+// ---------- wiring ----------
+function wireDrop(zoneId, onFiles) {
+  const zone = $(zoneId);
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag');
+    if (e.dataTransfer && e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
+  });
+}
+
+function updateLangButtons() {
+  for (const b of document.querySelectorAll('.lang-btn')) {
+    b.setAttribute('aria-pressed', String(b.dataset.lang === getLang()));
+  }
+}
+
+function init() {
+  const qsLang = new URLSearchParams(location.search).get('lang');
+  if (qsLang === 'en' || qsLang === 'bn') setLang(qsLang);
+  applyStatic();
+  updateLangButtons();
+  for (const b of document.querySelectorAll('.lang-btn')) {
+    b.addEventListener('click', () => {
+      if (b.dataset.lang === getLang()) return;
+      setLang(b.dataset.lang);
+    });
+  }
+  document.addEventListener('langchange', () => {
+    updateLangButtons();
+    render();
+    if (lastMsg) showMsg();
+    announce('lang.switched', {}, 'info');
+  });
+
+  const reqInput = $('req-input');
+  reqInput.addEventListener('change', () => {
+    if (reqInput.files[0]) loadRequirementsFile(reqInput.files[0]);
+    reqInput.value = '';
+  });
+  wireDrop('req-drop', (files) => loadRequirementsFile(files[0]));
+
+  const filesInput = $('files-input');
+  filesInput.addEventListener('change', () => {
+    const fl = Array.from(filesInput.files);
+    filesInput.value = '';
+    addFiles(fl);
+  });
+  wireDrop('files-drop', (files) => addFiles(files));
+  // Prevent the browser from opening files dropped outside the zones.
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => e.preventDefault());
+
+  $('btn-sample').addEventListener('click', loadSample);
+  $('btn-reset').addEventListener('click', resetWork);
+  $('btn-auto').addEventListener('click', autoMatch);
+  $('btn-generate').addEventListener('click', generate);
+
+  render();
+  autoLoadRequirements();
+
+  const qs = new URLSearchParams(location.search);
+  if (qs.has('debug')) {
+    window.__app = { state, actions, loadSample, autoMatch, setLang };
+    setInterval(() => { document.body.dataset.dbgWidth = `${innerWidth}/${document.documentElement.scrollWidth}`; }, 500);
+    // ?debug=sample loads the full sample and auto-matches (used for headless checks).
+    if (qs.get('debug') === 'sample') loadSample().then(autoMatch);
+    // ?debug=gen also fills every blocking row with something valid and generates.
+    if (qs.get('debug') === 'gen') {
+      loadSample().then(autoMatch).then(() => {
+        const used = new Set(state.matches.values());
+        for (const r of state.data.requirements) {
+          if (r.mandatory && !state.matches.has(r.id)) {
+            const f = [...state.files.values()].find((x) => !x.error && !used.has(x.id) && assign(state.matches, r.id, x.id, state.files).ok);
+            if (f) { setMatch(r.id, f.id); used.add(f.id); }
+          }
+          if (r.has_expiry && state.matches.has(r.id)) setExpiry(r.id, state.data.tender.submission_deadline);
+        }
+        return generate();
+      });
+    }
+  }
+}
+
+init();

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tender Package Builder</title>
+  <meta name="description" content="Assemble a complete, checked tender bid package in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="app.skip">Skip to main content</a>
+  <div id="file-banner" class="banner banner-warn" hidden role="alert"></div>
+  <script>
+    // Classic script: works even from file:// where ES modules are blocked.
+    (function () {
+      if (location.protocol !== 'file:') return;
+      var lang = 'en';
+      try { if (localStorage.getItem('lang') === 'bn') lang = 'bn'; } catch (e) {}
+      var msg = lang === 'bn'
+        ? 'এই অ্যাপটি সরাসরি ফাইল হিসেবে খুললে কাজ করবে না। লাইভ ওয়েবসাইটটি ব্যবহার করুন, অথবা এই ফোল্ডারে "python3 -m http.server" চালিয়ে http://localhost:8000 খুলুন।'
+        : 'This app does not work when opened directly as a file. Use the live website, or run "python3 -m http.server" in this folder and open http://localhost:8000.';
+      var b = document.getElementById('file-banner');
+      b.textContent = msg; b.hidden = false;
+      document.documentElement.lang = lang;
+    })();
+  </script>
+
+  <header class="site-header">
+    <div class="wrap header-row">
+      <div>
+        <h1 data-i18n="app.title">Tender Package Builder</h1>
+        <p class="tagline" data-i18n="app.tagline"></p>
+      </div>
+      <div class="lang" role="group" data-i18n-aria="lang.label">
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="true" lang="en">English</button>
+        <button type="button" class="lang-btn" data-lang="bn" aria-pressed="false" lang="bn">বাংলা</button>
+      </div>
+    </div>
+    <div class="wrap">
+      <p class="steps" data-i18n="app.steps"></p>
+      <p class="privacy" data-i18n="app.privacy"></p>
+    </div>
+  </header>
+
+  <div id="live" class="sr-only" aria-live="polite" role="status"></div>
+
+  <main id="main" class="wrap">
+    <div id="toast" class="toast" hidden></div>
+
+    <!-- 1. Requirements -->
+    <section class="card" aria-labelledby="h-req">
+      <h2 id="h-req" data-i18n="req.heading"></h2>
+      <p class="help" data-i18n="req.help"></p>
+      <label class="drop" id="req-drop" for="req-input">
+        <span class="drop-icon" aria-hidden="true">📄</span>
+        <span data-i18n="req.drop"></span>
+        <input id="req-input" class="visually-hidden-input" type="file" accept=".json,application/json" data-i18n-aria="req.dropAria">
+      </label>
+      <div class="btn-row">
+        <button type="button" id="btn-sample" class="btn" data-i18n="req.loadSample" data-i18n-title="req.loadSampleAria"></button>
+        <button type="button" id="btn-reset" class="btn btn-ghost" data-i18n="req.reset" data-i18n-title="req.resetAria"></button>
+      </div>
+      <div id="req-errors" class="errors" hidden role="alert"></div>
+      <div id="tender"></div>
+    </section>
+
+    <!-- 2. Files -->
+    <section class="card" aria-labelledby="h-files">
+      <h2 id="h-files" data-i18n="files.heading"></h2>
+      <p class="help" id="files-help"></p>
+      <label class="drop" id="files-drop" for="files-input">
+        <span class="drop-icon" aria-hidden="true">📎</span>
+        <span data-i18n="files.drop"></span>
+        <input id="files-input" class="visually-hidden-input" type="file" multiple accept=".pdf,application/pdf" data-i18n-aria="files.dropAria">
+      </label>
+      <p id="files-busy" class="busy" hidden><span class="spinner" aria-hidden="true"></span><span data-i18n="files.reading"></span></p>
+      <div id="rejected"></div>
+      <div id="files"></div>
+    </section>
+
+    <!-- 3. Checklist -->
+    <section class="card" aria-labelledby="h-check">
+      <h2 id="h-check" data-i18n="check.heading"></h2>
+      <p class="help" data-i18n="check.help"></p>
+      <div class="btn-row">
+        <button type="button" id="btn-auto" class="btn" data-i18n="check.autoMatch"></button>
+      </div>
+      <p id="check-summary" class="summary"></p>
+      <div id="checklist"></div>
+      <details class="legend" open>
+        <summary data-i18n="legend.heading"></summary>
+        <ul id="legend"></ul>
+      </details>
+    </section>
+
+    <!-- 4. Generate -->
+    <section class="card" aria-labelledby="h-gen">
+      <h2 id="h-gen" data-i18n="gen.heading"></h2>
+      <div id="gen-info"></div>
+      <label class="check"><input type="checkbox" id="opt-index" checked> <span data-i18n="gen.index"></span></label>
+      <div class="btn-row">
+        <button type="button" id="btn-generate" class="btn btn-primary" data-i18n="gen.button" aria-describedby="gen-reasons"></button>
+      </div>
+      <div id="gen-reasons"></div>
+      <div id="gen-result" role="status"></div>
+    </section>
+  </main>
+
+  <footer class="wrap site-footer">
+    <p>pdf-lib (MIT) · Hind Siliguri, Inter (SIL OFL)</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script type="module" src="js/ui/app.js"></script>
+</body>
+</html>
