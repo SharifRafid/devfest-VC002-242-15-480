@@ -33,6 +33,27 @@ export function planPackage(docPageCounts, coverPages, indexPages) {
   return { coverPages, indexPages, starts, total: next - 1 };
 }
 
+// "all" or "1, 3-5" -> Set of page numbers within 1..total.
+export function parsePageList(text, total) {
+  const raw = String(text ?? '').trim();
+  const fail = { ok: false, key: 'err.seal.pages', params: { value: raw } };
+  if (!raw) return fail;
+  if (/^(all|সব)$/i.test(raw)) {
+    if (!Number.isFinite(total)) return { ok: true, pages: new Set(), all: true };
+    return { ok: true, pages: new Set(Array.from({ length: total }, (_, i) => i + 1)), all: true };
+  }
+  const pages = new Set();
+  for (const part of raw.split(',')) {
+    const m = /^\s*(\d+)\s*(?:-\s*(\d+)\s*)?$/.exec(part);
+    if (!m) return fail;
+    const a = +m[1], b = m[2] ? +m[2] : a;
+    if (a < 1 || b < a || b > total) return fail;
+    if (b - a > 10000) return fail;
+    for (let i = a; i <= b; i++) pages.add(i);
+  }
+  return { ok: true, pages };
+}
+
 export async function inspectPdf(bytes, PDFLib) {
   try {
     const doc = await PDFLib.PDFDocument.load(bytes, { updateMetadata: false });
@@ -94,7 +115,7 @@ function drawTextPages(out, laidOut, rgb) {
 }
 
 // items: [{req:{title_en}, file:{name, bytes, pages}}] already in package order.
-export async function buildPackage({ tender, items, generatedDate, PDFLib, includeIndex }) {
+export async function buildPackage({ tender, items, generatedDate, PDFLib, includeIndex, seal = null }) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const out = await PDFDocument.create();
   out.setTitle(safeText(`${tender.tender_id} Package`));
@@ -148,11 +169,28 @@ export async function buildPackage({ tender, items, generatedDate, PDFLib, inclu
 
   const all = out.getPages();
   const total = all.length;
+  let sealImg = null, sealPages = null;
+  if (seal && seal.bytes) {
+    const pl = parsePageList(seal.pagesText, total);
+    if (!pl.ok) { const e = new Error(pl.key); e.key = pl.key; e.params = pl.params; throw e; }
+    sealPages = pl.pages;
+    sealImg = await out.embedPng(seal.bytes);
+  }
   all.forEach((page, i) => {
     const isDoc = i >= generated.length;
     const label = safeText(footerText(tender.tender_id, i + 1, total));
     const size = 10;
     const w = fonts.regular.widthOfTextAtSize(label, size);
+    if (sealImg && sealPages.has(i + 1)) {
+      // Seal sits inside the page area above the footer band (drawn before the box grows).
+      const box = isDoc ? page.getCropBox() : { x: 0, y: FOOTER_BAND, width: A4[0], height: A4[1] - FOOTER_BAND };
+      const sw = Math.min(110, box.width * 0.22);
+      const sh = sw * (sealImg.height / sealImg.width);
+      const m = 24, pos = seal.position || 'br';
+      const x = pos.endsWith('l') ? box.x + m : box.x + box.width - sw - m;
+      const y = pos.startsWith('t') ? box.y + box.height - sh - m : box.y + m;
+      page.drawImage(sealImg, { x, y, width: sw, height: sh, opacity: 0.95 });
+    }
     if (isDoc) {
       // Grow the visible box downwards by FOOTER_BAND so the footer sits below the original content.
       const box = page.getCropBox();

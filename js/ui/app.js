@@ -9,6 +9,7 @@ import { inspectPdf, buildPackage, packageFileName } from '../core/package.js';
 import { toCsv, CSV_BOM, checklistFileName } from '../core/csv.js';
 import { $ } from './dom.js';
 import { renderAll } from './render.js';
+import { initSeal, getSealOption, sealDebug } from './seal.js';
 
 export const state = {
   data: null,               // {tender, requirements}
@@ -412,6 +413,7 @@ async function generate() {
     const out = await buildPackage({
       tender: state.data.tender, items, generatedDate: today(), PDFLib: lib,
       includeIndex: $('opt-index').checked,
+      seal: getSealOption(),
     });
     const doc = await lib.PDFDocument.load(out);
     const pages = doc.getPageCount();
@@ -427,9 +429,11 @@ async function generate() {
     announce('gen.done', { name, pages }, 'ok');
   } catch (e) {
     state.generating = false;
-    state.genResult = { kind: 'error', key: 'err.generate', params: { msg: String((e && e.message) || e) } };
+    state.genResult = e && e.key
+      ? { kind: 'error', key: e.key, params: e.params || {} }
+      : { kind: 'error', key: 'err.generate', params: { msg: String((e && e.message) || e) } };
     render();
-    announce('err.generate', state.genResult.params, 'error');
+    announce(state.genResult.key, state.genResult.params, 'error');
   }
 }
 
@@ -497,13 +501,14 @@ function init() {
   $('btn-auto').addEventListener('click', autoMatch);
   $('btn-csv').addEventListener('click', exportCsv);
   $('btn-generate').addEventListener('click', generate);
+  initSeal(announce);
 
   render();
   autoLoadRequirements();
 
   const qs = new URLSearchParams(location.search);
   if (qs.has('debug')) {
-    window.__app = { state, actions, loadSample, autoMatch, setLang, exportCsv, resetWork, addFiles, loadRequirementsFile };
+    window.__app = { state, actions, loadSample, autoMatch, setLang, exportCsv, resetWork, addFiles, loadRequirementsFile, seal: sealDebug, generate };
     setInterval(() => { document.body.dataset.dbgWidth = `${innerWidth}/${document.documentElement.scrollWidth}`; }, 500);
     // ?debug=sample loads the full sample and auto-matches (used for headless checks).
     if (qs.get('debug') === 'sample') loadSample().then(autoMatch);

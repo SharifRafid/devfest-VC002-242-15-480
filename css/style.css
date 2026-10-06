@@ -190,3 +190,23 @@ p { margin: .3em 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Seal / signature */
+.seal { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin: 12px 0; min-width: 0; }
+.seal legend { font-weight: 600; padding: 0 6px; }
+.seal .field { margin: 10px 0; display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+.seal label { font-weight: 600; }
+.seal input[type="text"], .seal select { font: inherit; padding: 8px 10px; min-height: 40px; border: 1px solid #7d8ea6; border-radius: 6px; max-width: 22rem; width: 100%; background: var(--surface); color: var(--text); }
+.seal input[type="file"] { font: inherit; max-width: 100%; }
+.seal input:focus-visible, .seal select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.seal input[aria-invalid="true"] { border-color: var(--bad-bd); }
+.seal .small { font-size: .9rem; margin: 0; }
+.seal-preview { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.seal-preview img { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--border); border-radius: 6px; background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 12px 12px; }
+.seal-preview span { overflow-wrap: anywhere; }
+.ok-text { color: var(--ok-fg); font-weight: 600; }
+.err-text { color: var(--bad-fg); font-weight: 600; }
+
+/* Seal picker: native input is hidden (its text can't be translated); the label acts as the button. */
+.seal-pick, .field .seal-pick { display: inline-block; width: auto; cursor: pointer; }
+#seal-input:focus-visible + .seal-pick { outline: 3px solid var(--primary); outline-offset: 2px; }

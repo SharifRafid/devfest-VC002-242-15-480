@@ -102,6 +102,35 @@
       <h2 id="h-gen" data-i18n="gen.heading"></h2>
       <div id="gen-info"></div>
       <label class="check"><input type="checkbox" id="opt-index" checked> <span data-i18n="gen.index"></span></label>
+      <fieldset class="seal">
+        <legend data-i18n="seal.heading"></legend>
+        <p class="help" data-i18n="seal.intro"></p>
+        <div class="field">
+          <input type="file" id="seal-input" class="visually-hidden-input" accept="image/png" aria-describedby="seal-file-help">
+          <label for="seal-input" class="btn seal-pick"><span aria-hidden="true">🖼 </span><span data-i18n="seal.fileLabel"></span></label>
+          <p id="seal-file-help" class="help small" data-i18n="seal.fileHelp"></p>
+        </div>
+        <div id="seal-preview" class="seal-preview" hidden>
+          <img id="seal-img" alt="" width="64" height="64">
+          <span id="seal-name"></span>
+          <button type="button" id="seal-remove" class="btn btn-ghost" data-i18n="seal.remove"></button>
+        </div>
+        <div class="field">
+          <label for="seal-pages" data-i18n="seal.pagesLabel"></label>
+          <input type="text" id="seal-pages" inputmode="text" autocomplete="off" data-i18n-placeholder="seal.pagesPlaceholder" aria-describedby="seal-pages-help seal-pages-state">
+          <p id="seal-pages-help" class="help small" data-i18n="seal.pagesHelp"></p>
+          <p id="seal-pages-state" class="small"></p>
+        </div>
+        <div class="field">
+          <label for="seal-pos" data-i18n="seal.posLabel"></label>
+          <select id="seal-pos">
+            <option value="br" data-i18n="seal.pos.br" selected></option>
+            <option value="bl" data-i18n="seal.pos.bl"></option>
+            <option value="tr" data-i18n="seal.pos.tr"></option>
+            <option value="tl" data-i18n="seal.pos.tl"></option>
+          </select>
+        </div>
+      </fieldset>
       <div class="btn-row">
         <button type="button" id="btn-generate" class="btn btn-primary" data-i18n="gen.button" aria-describedby="gen-reasons"></button>
       </div>

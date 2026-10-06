@@ -5,7 +5,7 @@ import { parseRequirements, isValidDate } from '../js/core/validate.js';
 import { STATUS, computeStatus, computeAll, canGenerate } from '../js/core/status.js';
 import { assign, unassign, removeFileMatch, findDuplicates, suggestMatches, reqOfFile } from '../js/core/match.js';
 import { checkPdfFile, checkLimits, checkJsonFile, isPdfHeader } from '../js/core/files.js';
-import { footerText, packageFileName, planPackage, safeText } from '../js/core/package.js';
+import { footerText, packageFileName, planPackage, safeText, parsePageList } from '../js/core/package.js';
 import { sha256Hex } from '../js/core/hash.js';
 
 const sampleText = readFileSync(new URL('../sample-pack/requirements.json', import.meta.url), 'utf8');
@@ -139,4 +139,15 @@ test('auto-match suggests by file name without double-using duplicates', () => {
   assert.equal(reqOfFile(new Map([['R1', '1']]), '1'), 'R1');
   const s2 = suggestMatches(data.requirements, [{ id: 'o', name: 'trade_license_2025.pdf', hash: 'o' }, { id: 'n', name: 'trade_license_2026.pdf', hash: 'n' }], new Map());
   assert.equal(s2[0].fileId, 'n');
+});
+
+test('seal page list parsing', () => {
+  assert.deepEqual([...parsePageList('1, 3-5', 10).pages], [1, 3, 4, 5]);
+  assert.equal(parsePageList('all', 3).pages.size, 3);
+  assert.equal(parsePageList('0', 3).ok, false);
+  assert.equal(parsePageList('4', 3).ok, false);
+  assert.equal(parsePageList('5-2', 9).ok, false);
+  assert.equal(parsePageList('a', 9).key, 'err.seal.pages');
+  assert.equal(parsePageList('', 9).ok, false);
+  assert.equal(parsePageList('2-4', Infinity).ok, true);
 });
