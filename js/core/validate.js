@@ -18,6 +18,23 @@ export function stripBom(text) {
 
 const TENDER_FIELDS = ['tender_id', 'title', 'procuring_entity', 'bidder', 'submission_deadline'];
 
+// Lenient readers for the unseen pack: numeric strings and "true"/"false"/1/0 are accepted.
+export function coerceNumber(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v);
+  return v;
+}
+export function coerceBool(v) {
+  if (typeof v === 'boolean') return v;
+  if (v === 1 || v === 0) return v === 1;
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase();
+    if (s === 'true' || s === 'yes' || s === '1') return true;
+    if (s === 'false' || s === 'no' || s === '0') return false;
+  }
+  return v;
+}
+
 export function sortRequirements(list) {
   return [...list].sort((a, b) => (a.order - b.order) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
@@ -36,10 +53,15 @@ export function parseRequirements(text) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
     return { ok: false, errors: [{ key: 'err.json.notObject', params: {} }] };
   }
-  const tender = obj.tender;
+  const tender = obj.tender && typeof obj.tender === 'object' && !Array.isArray(obj.tender) ? { ...obj.tender } : obj.tender;
   if (!tender || typeof tender !== 'object' || Array.isArray(tender)) {
     errors.push({ key: 'err.tender.missing', params: {} });
   } else {
+    // "2026-10-20T00:00:00" or "2026-10-20 00:00" -> "2026-10-20"
+    if (typeof tender.submission_deadline === 'string') {
+      const m = /^\s*(\d{4}-\d{2}-\d{2})(?:[T ].*)?$/.exec(tender.submission_deadline);
+      if (m && isValidDate(m[1])) tender.submission_deadline = m[1];
+    }
     for (const f of TENDER_FIELDS) {
       if (typeof tender[f] !== 'string' || tender[f].trim() === '') {
         errors.push({ key: 'err.tender.field', params: { field: f } });
@@ -58,12 +80,14 @@ export function parseRequirements(text) {
     errors.push({ key: 'err.reqs.empty', params: {} });
   } else {
     const ids = new Set();
-    reqs.forEach((r, i) => {
+    reqs.forEach((raw, i) => {
       const n = i + 1;
-      if (!r || typeof r !== 'object' || Array.isArray(r)) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
         errors.push({ key: 'err.req.notObject', params: { n } });
         return;
       }
+      // Tolerate small format drift ("3" for order, "true"/1 for booleans) instead of refusing the file.
+      const r = { ...raw, order: coerceNumber(raw.order), mandatory: coerceBool(raw.mandatory), has_expiry: coerceBool(raw.has_expiry) };
       let bad = false;
       if (typeof r.id !== 'string' || r.id.trim() === '') {
         errors.push({ key: 'err.req.id', params: { n } }); bad = true;

@@ -5,10 +5,51 @@ import { parseRequirements, isValidDate } from '../js/core/validate.js';
 import { STATUS, computeStatus, computeAll, canGenerate } from '../js/core/status.js';
 import { assign, unassign, removeFileMatch, findDuplicates, suggestMatches, reqOfFile } from '../js/core/match.js';
 import { checkPdfFile, checkLimits, checkJsonFile, isPdfHeader } from '../js/core/files.js';
-import { footerText, packageFileName, planPackage, safeText, parsePageList } from '../js/core/package.js';
+import { footerText, packageFileName, planPackage, safeText, parsePageList, needsImage, wrapText } from '../js/core/package.js';
 import { sha256Hex } from '../js/core/hash.js';
 
 const sampleText = readFileSync(new URL('../sample-pack/requirements.json', import.meta.url), 'utf8');
+
+test('lenient requirements: numeric-string order, string/number booleans, deadline with time', () => {
+  const r = parseRequirements(JSON.stringify({
+    tender: { tender_id: 'X', title: 'T', procuring_entity: 'P', bidder: 'B', submission_deadline: '2026-10-20T00:00:00' },
+    requirements: [
+      { id: 'A', order: '2', title_en: 'a', mandatory: 'true', has_expiry: 0 },
+      { id: 'B', order: 1, title_en: 'b', mandatory: 1, has_expiry: 'False' },
+      { id: 'C', order: '3', title_en: 'c', mandatory: 'maybe', has_expiry: false },
+    ],
+  }));
+  assert.equal(r.ok, false, 'a truly invalid boolean is still an error');
+  assert.ok(r.errors.some((e) => e.key === 'err.req.bool'));
+  const ok = parseRequirements(JSON.stringify({
+    tender: { tender_id: 'X', title: 'T', procuring_entity: 'P', bidder: 'B', submission_deadline: '2026-10-20T00:00:00' },
+    requirements: [
+      { id: 'A', order: '2', title_en: 'a', mandatory: 'true', has_expiry: 0 },
+      { id: 'B', order: 1, title_en: 'b', mandatory: 1, has_expiry: 'False' },
+    ],
+  }));
+  assert.equal(ok.ok, true);
+  assert.equal(ok.data.tender.submission_deadline, '2026-10-20');
+  assert.deepEqual(ok.data.requirements.map((x) => [x.id, x.order, x.mandatory, x.has_expiry]), [['B', 1, true, false], ['A', 2, true, false]]);
+});
+
+test('cover text: needsImage detects non-Latin text; wrapText wraps long values and hard-breaks long words', () => {
+  assert.equal(needsImage('Meghna Tech Solutions Ltd.'), false);
+  assert.equal(needsImage('“quoted” – dash'), false);
+  assert.equal(needsImage('মেঘনা টেক'), true);
+  const font = { widthOfTextAtSize: (s, size) => s.length * size * 0.5 }; // 5.5 pt per char at 11 pt
+  const title = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' '); // ~280 chars
+  const lines = wrapText(title, font, 11, 300);
+  assert.ok(lines.length > 4);
+  for (const l of lines) assert.ok(font.widthOfTextAtSize(l, 11) <= 300, `line too wide: ${l}`);
+  assert.equal(lines.join(' '), title, 'no words lost');
+  const longWord = 'x'.repeat(200);
+  const broken = wrapText(`name ${longWord}.pdf`, font, 11, 110);
+  assert.ok(broken.length >= 10);
+  for (const l of broken) assert.ok(font.widthOfTextAtSize(l, 11) <= 110, `piece too wide: ${l}`);
+  assert.equal(broken.join('').replace(/ /g, ''), `name${longWord}.pdf`);
+  assert.deepEqual(wrapText('', font, 11, 100), ['']);
+});
 
 test('sample requirements.json parses and is sorted by order', () => {
   const r = parseRequirements(sampleText);
@@ -23,7 +64,7 @@ test('BOM is stripped; invalid JSON and schema errors are reported', () => {
   assert.equal(parseRequirements('{bad').errors[0].key, 'err.json.invalid');
   assert.equal(parseRequirements('').errors[0].key, 'err.json.empty');
   const r = parseRequirements(JSON.stringify({ tender: { tender_id: 'X', title: 'T', procuring_entity: 'P', bidder: 'B', submission_deadline: '2026-02-30' },
-    requirements: [{ id: 'A', order: 1, title_en: 'a', mandatory: true, has_expiry: 'no' }, { id: 'A', order: 2, title_en: 'b', mandatory: true, has_expiry: false }] }));
+    requirements: [{ id: 'A', order: 1, title_en: 'a', mandatory: true, has_expiry: 'maybe' }, { id: 'A', order: 2, title_en: 'b', mandatory: true, has_expiry: false }] }));
   const keys = r.errors.map((e) => e.key);
   assert.ok(keys.includes('err.tender.deadline'));
   assert.ok(keys.includes('err.req.bool'));
@@ -139,6 +180,9 @@ test('auto-match suggests by file name without double-using duplicates', () => {
   assert.equal(reqOfFile(new Map([['R1', '1']]), '1'), 'R1');
   const s2 = suggestMatches(data.requirements, [{ id: 'o', name: 'trade_license_2025.pdf', hash: 'o' }, { id: 'n', name: 'trade_license_2026.pdf', hash: 'n' }], new Map());
   assert.equal(s2[0].fileId, 'n');
+  const s3 = suggestMatches(data.requirements, [{ id: 'c', name: 'experience_cert (1).pdf', hash: 'd' }, { id: 'o', name: 'experience_cert.pdf', hash: 'd' }], new Map());
+  assert.equal(s3.length, 1);
+  assert.equal(s3[0].fileId, 'o', 'original preferred over the (1) copy');
 });
 
 test('seal page list parsing', () => {

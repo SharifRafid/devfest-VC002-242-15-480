@@ -23,6 +23,7 @@ export const state = {
   busy: false,              // reading files
   generating: false,
   genResult: null,          // {kind:'ok'|'error', key, params}
+  lastPackage: null,        // {url, name, pages} of the last generated package (blob URL)
   prevStatus: new Map(),    // reqId -> status (for change highlight)
 };
 
@@ -270,6 +271,8 @@ function autoMatch() {
 // Full reset to the very first screen: no requirements, no files, no matches, no dates, no seal.
 function resetWork() {
   if (state.busy) { announce('files.reading', {}, 'info'); return; }
+  if (!window.confirm(t('req.resetConfirm'))) return;
+  dropPackage();
   const f = state.files.size;
   const m = state.matches.size;
   const e = state.expiries.size;
@@ -406,6 +409,28 @@ async function loadSample() {
   }
 }
 
+// ---------- open / keep the generated package ----------
+function openFile(fileId) {
+  const f = state.files.get(fileId);
+  if (!f || f.error) return;
+  try {
+    const url = URL.createObjectURL(new Blob([f.bytes], { type: 'application/pdf' }));
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    announce('files.opened', { name: f.name }, 'info');
+  } catch {
+    announce('err.file.read', {}, 'error');
+  }
+}
+function dropPackage() {
+  if (state.lastPackage) { try { URL.revokeObjectURL(state.lastPackage.url); } catch { /* ignore */ } }
+  state.lastPackage = null;
+}
+function openPackage() {
+  if (!state.lastPackage) return;
+  window.open(state.lastPackage.url, '_blank', 'noopener');
+}
+
 // ---------- generate ----------
 async function generate() {
   if (!state.data || state.generating) return;
@@ -440,11 +465,12 @@ async function generate() {
     const doc = await lib.PDFDocument.load(out);
     const pages = doc.getPageCount();
     const name = packageFileName(state.data.tender.tender_id);
+    dropPackage();
     const url = URL.createObjectURL(new Blob([out], { type: 'application/pdf' }));
     const a = document.createElement('a');
     a.href = url; a.download = name;
     document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    state.lastPackage = { url, name, pages }; // kept so the user can download again or open it
     state.genResult = { kind: 'ok', key: 'gen.done', params: { name, pages } };
     state.generating = false;
     render();
@@ -459,7 +485,7 @@ async function generate() {
   }
 }
 
-export const actions = { removeFile, setMatch, clearMatch, setExpiry, clearRejected() {
+export const actions = { removeFile, setMatch, clearMatch, setExpiry, openFile, openPackage, clearRejected() {
   if (!state.rejected.length) return;
   state.rejected = []; render();
 } };

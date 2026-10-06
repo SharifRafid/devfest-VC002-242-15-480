@@ -25,7 +25,7 @@ Built for the tender/procurement office of a bidding company: staff turn a pile 
    ```
 3. **Tests:** `npm test` (Node 20+, uses `node:test`, no dependencies).
 
-There is no build step. pdf-lib is loaded from the jsDelivr CDN.
+There is no build step. pdf-lib 1.17.1 is bundled in `vendor/` (the jsDelivr CDN is only a fallback), so the app also works when the CDN is unreachable.
 
 ## Main Features
 
@@ -38,11 +38,11 @@ There is no build step. pdf-lib is loaded from the jsDelivr CDN.
 | 4.5 Check everything | Each document shows exactly one status: `Missing`, `Expiry date needed`, `Expired`, `Not provided` or `OK`, with colour, icon and text. Statuses update on every change. Expiring on the deadline day counts as OK. |
 | 4.6 Duplicates | Files are compared by SHA-256 of their content, so name doesn't matter. Duplicates get a badge in the file list, and the app refuses to match copies to different documents. |
 | 4.7 Make the package | **Generate** stays disabled while any document is blocking, and the reasons are listed. The output is a cover page, then documents in `order` with all their pages; optional documents without a file are skipped. Every page has the footer `<tender_id> \| Page X of Y`. |
-| 4.8 Download | Downloads as `<tender_id>_Package.pdf`. |
+| 4.8 Download | Downloads as `<tender_id>_Package.pdf`. After generation, **Download again** and **Open package** stay available until the next generation or Reset. |
 | 4.9 Two languages | An EN/বাংলা switch translates the whole UI, uses `title_bn`/`title_en`, sets `<html lang>` and is remembered. The PDF cover is in English, as 6.1 requires. |
 | 6.4 Footer | Each document page is extended 28 pt at the bottom with a white band, and the footer goes in that band. It never covers original content. |
 
-Also included: **Reset**, a full start-over that clears the requirements and tender details, files, matches, dates, seal and saved work, and says what it cleared, an aria-live status message for every action, a legend for all badges, empty/loading/error states, a `file://` notice, keyboard support and visible focus, no horizontal scroll at 360 px, and `prefers-reduced-motion`.
+Also included: **Open** on every file (shows the PDF in a new tab, so an unclear scan like `scan_0042.pdf` can be identified before matching), a note listing the optional documents that will be left out of the package, **Reset** (with a confirmation step), a full start-over that clears the requirements and tender details, files, matches, dates, seal and saved work, and says what it cleared, an aria-live status message for every action, a legend for all badges, empty/loading/error states, a `file://` notice, keyboard support and visible focus, no horizontal scroll at 360 px, and `prefers-reduced-motion`.
 
 ## Bonus Features
 
@@ -50,13 +50,13 @@ Also included: **Reset**, a full start-over that clears the requirements and ten
 - **Auto-match** that suggests matches from file names. It never matches duplicates or damaged files.
 - **Bad files handled safely:** damaged or password-protected PDFs show a clear message, can't be matched, and don't crash the app.
 - **Seal or signature:** upload a PNG and choose pages of the final package (`all` or a list like `1, 3-5`) and a corner. The image is drawn above the footer band.
-- **Bangla text shown correctly on the index page:** each `title_bn` is drawn by the browser on a canvas, which shapes conjuncts properly, and embedded as an image next to the English title. pdf-lib can't shape Bangla on its own.
+- **Bangla text shown correctly on the cover and index page:** each `title_bn` is drawn by the browser on a canvas, which shapes conjuncts properly, and embedded as an image next to the English title on the index page. The same renderer is used on the cover for any tender field or file name that Helvetica can't show (for example a Bangla bidder name), so nothing degrades to `?`. pdf-lib can't shape Bangla on its own.
 - **Export checklist as CSV:** downloads `<tender_id>_Checklist.csv` with order, document, file name, pages, expiry date and status, in the selected language. The file is UTF-8 with BOM so Excel opens it correctly, and cells are protected against formula injection.
 - **Save and reopen work:** matches and expiry dates are saved automatically in localStorage per tender, with files identified by SHA-256 content hash. They are restored when the same requirements and files are loaded again. **Reset** also clears the saved work.
 
 ## Known Problems
 
-- Cover text uses Helvetica, so characters outside Latin-1 in tender fields print as `?`. The cover is in English as 6.1 requires. Bangla document titles appear on the index page as images.
+- The cover is in English as 6.1 requires; its labels use Helvetica. Tender values and file names outside Latin-1 are embedded as images (rendered by the browser), except in the page footer, where a non-Latin `tender_id` would print as `?`. Long values wrap inside the margins; a single very long word is hard-broken.
 - On rotated source pages (90/180/270°) the footer is placed correctly, but the seal corner is chosen in the page's unrotated coordinates.
 - Expiry dates are typed in by the user; the app doesn't read them from the PDF (task 4.4).
 - The bonus "AI help" is not implemented. The app needs no network except the pdf-lib CDN and the optional fonts.
@@ -108,6 +108,7 @@ These were taken from the live site.
 ## AI Tools Used
 
 - Claude Code (Claude Opus 5.5) with parallel sub-agents for requirements, planning, setup, core logic and UI.
+- Claude Code (Claude Fable 5.1) for the final review pass (cover wrapping and Bangla cover values, file preview, lenient requirements parsing, bundled pdf-lib).
 
 ## Most Useful Prompt
 
@@ -118,6 +119,6 @@ See `PROMPT.md` #1. The full first prompt is copied there verbatim. Its key pass
 ## Credits / Licenses
 
 - Code: MIT License (see `LICENSE`).
-- [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1: MIT License.
+- [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1: MIT License (bundled as `vendor/pdf-lib.min.js`, unmodified).
 - Fonts: Inter and Hind Siliguri via Google Fonts, SIL Open Font License 1.1.
 - Sample data: the organizers' fictional sample pack.

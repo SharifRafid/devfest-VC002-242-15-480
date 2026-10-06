@@ -98,9 +98,13 @@ function renderFiles(state, actions) {
         badges.length ? h('span', { class: 'badges' }, badges) : null,
         dupOf.has(f.id) ? h('span', { class: 'file-note', text: t('files.duplicateOf', { names: dupOf.get(f.id).join(', ') }) }) : null,
         f.error ? null : h('span', { class: 'file-note', text: req ? t('files.matchedTo', { doc: docTitle(req) }) : t('files.notMatched') })),
-      h('button', { type: 'button', class: 'btn btn-small btn-danger', text: t('files.remove'),
-        'aria-label': t('files.removeAria', { name: f.name }), dataset: { fkey: `rm-${f.id}` },
-        onclick: () => actions.removeFile(f.id) }));
+      h('span', { class: 'file-actions' },
+        f.error ? null : h('button', { type: 'button', class: 'btn btn-small btn-ghost', text: t('files.open'),
+          'aria-label': t('files.openAria', { name: f.name }), dataset: { fkey: `op-${f.id}` },
+          onclick: () => actions.openFile(f.id) }),
+        h('button', { type: 'button', class: 'btn btn-small btn-danger', text: t('files.remove'),
+          'aria-label': t('files.removeAria', { name: f.name }), dataset: { fkey: `rm-${f.id}` },
+          onclick: () => actions.removeFile(f.id) })));
   })));
 }
 
@@ -209,6 +213,8 @@ function renderGenerate(state, sts) {
   } else {
     const n = state.data.requirements.filter((r) => state.matches.has(r.id)).length;
     info.append(h('p', { class: 'muted', text: `${t('gen.fileName', { name: packageFileName(state.data.tender.tender_id) })} · ${t('gen.includes', { n })}` }));
+    const skipped = state.data.requirements.filter((r) => !r.mandatory && !state.matches.has(r.id));
+    if (skipped.length) info.append(h('p', { class: 'muted', text: t('gen.skipped', { n: skipped.length, names: skipped.map(docTitle).join(', ') }) }));
     const blocking = sts.filter((s) => s.blocking);
     if (blocking.length) {
       reasons.append(h('div', { class: 'reasons' },
@@ -222,6 +228,11 @@ function renderGenerate(state, sts) {
   const res = clear($('gen-result'));
   if (state.generating) res.append(h('p', { class: 'busy' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), h('span', { text: t('gen.building') })));
   else if (state.genResult) res.append(h('p', { class: state.genResult.kind === 'ok' ? 'success' : 'error-msg', text: t(state.genResult.key, state.genResult.params) }));
+  if (!state.generating && state.lastPackage) {
+    res.append(h('div', { class: 'btn-row' },
+      h('a', { class: 'btn', href: state.lastPackage.url, download: state.lastPackage.name, text: t('gen.again'), dataset: { fkey: 'pkg-again' } }),
+      h('button', { type: 'button', class: 'btn btn-ghost', text: t('gen.open'), dataset: { fkey: 'pkg-open' }, onclick: () => actions.openPackage() })));
+  }
 }
 
 // ---------- progress stepper (header) ----------

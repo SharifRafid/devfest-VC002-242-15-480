@@ -16,10 +16,16 @@ export function packageFileName(tenderId) {
 }
 
 // Helvetica (WinAnsi) cannot draw every character; replace what it can't show.
+const NON_LATIN = /[^\x20-\x7E\xA0-\xFF]/;
+function plainQuotes(s) {
+  return String(s ?? '').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u2013\u2014]/g, '-');
+}
 export function safeText(s) {
-  return String(s ?? '')
-    .replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, '-')
-    .replace(/[^ -~ -ÿ]/g, '?');
+  return plainQuotes(s).replace(new RegExp(NON_LATIN.source, 'g'), '?');
+}
+// True when the text (e.g. Bangla) must be drawn as an image because Helvetica cannot show it.
+export function needsImage(s) {
+  return NON_LATIN.test(plainQuotes(s));
 }
 
 export function plural(n, word) {
@@ -66,35 +72,66 @@ export async function inspectPdf(bytes, PDFLib) {
   }
 }
 
-function wrap(text, font, size, maxWidth) {
+// Word-wrap; a single word wider than the line (e.g. a long file name) is hard-broken.
+export function wrapText(text, font, size, maxWidth) {
   const words = safeText(text).split(/\s+/).filter(Boolean);
   const lines = [];
   let cur = '';
-  for (const w of words) {
+  const fits = (s) => font.widthOfTextAtSize(s, size) <= maxWidth;
+  for (let w of words) {
+    while (!fits(w) && w.length > 1) {
+      const prefix = cur ? `${cur} ` : '';
+      let k = w.length - 1;
+      while (k > 1 && !fits(prefix + w.slice(0, k))) k--;
+      if (cur && k <= 1) { lines.push(cur); cur = ''; continue; }
+      lines.push(prefix + w.slice(0, k));
+      cur = '';
+      w = w.slice(k);
+    }
     const t = cur ? `${cur} ${w}` : w;
-    if (font.widthOfTextAtSize(t, size) <= maxWidth || !cur) cur = t;
+    if (fits(t) || !cur) cur = t;
     else { lines.push(cur); cur = w; }
   }
   if (cur) lines.push(cur);
   return lines.length ? lines : [''];
 }
+const wrap = wrapText;
+
+const LABEL_W = 150; // width of the label column on two-column cover rows
 
 // Lay out "lines" ({text, size, bold, gap}) over as many A4 pages as needed.
+// A block with `value` is a two-column row: bold label left, value wrapped in the value column
+// (or drawn as an image via `valueImg` when Helvetica cannot show it).
 function layoutText(blocks, fonts) {
   const usable = A4[1] - MARGIN - (MARGIN + FOOTER_BAND);
   const pages = [[]];
   let y = 0;
+  const push = (mk, lh) => {
+    if (y + lh > usable) { pages.push([]); y = 0; }
+    pages[pages.length - 1].push(mk(y));
+    y += lh;
+  };
   for (const b of blocks) {
     const font = b.bold ? fonts.bold : fonts.regular;
     const size = b.size || 11;
     const lh = Math.max(LINE, size * 1.35);
+    if (b.gap) y += b.gap;
+    if ('value' in b) {
+      const vx = b.valueX ?? LABEL_W + 10;
+      const vw = A4[0] - 2 * MARGIN - vx;
+      const label = safeText(b.text);
+      if (b.valueImg) {
+        push((yy) => ({ text: label, font, size, y: yy + size, indent: 0, valueImg: b.valueImg, valueX: vx, valueMax: vw }), lh);
+      } else {
+        const vlines = wrap(b.value, fonts.regular, size, vw);
+        vlines.forEach((l, i) => push((yy) => ({ text: i === 0 ? label : '', font, size, y: yy + size, indent: 0, value: l, valueX: vx, valueFont: fonts.regular }), lh));
+      }
+      continue;
+    }
     // Rows with a Bangla title image keep the English part in the left column.
     const lines = wrap(b.text, font, size, b.img ? 230 : A4[0] - 2 * MARGIN - (b.indent || 0));
-    if (b.gap) y += b.gap;
     for (const l of lines) {
-      if (y + lh > usable) { pages.push([]); y = 0; }
-      pages[pages.length - 1].push({ text: l, font, size, y: y + size, indent: b.indent || 0, right: b.right ? safeText(b.right) : null, img: l === lines[0] ? b.img : null });
-      y += lh;
+      push((yy) => ({ text: l, font, size, y: yy + size, indent: b.indent || 0, right: b.right ? safeText(b.right) : null, img: l === lines[0] ? b.img : null }), lh);
     }
   }
   return pages;
@@ -105,7 +142,15 @@ function drawTextPages(out, laidOut, rgb) {
     const page = out.addPage(A4);
     for (const it of items) {
       const y = A4[1] - MARGIN - it.y;
-      page.drawText(it.text, { x: MARGIN + it.indent, y, size: it.size, font: it.font, color: rgb(0.1, 0.1, 0.12) });
+      const color = rgb(0.1, 0.1, 0.12);
+      if (it.text) page.drawText(it.text, { x: MARGIN + it.indent, y, size: it.size, font: it.font, color });
+      if (it.value) page.drawText(it.value, { x: MARGIN + it.valueX, y, size: it.size, font: it.valueFont, color });
+      if (it.valueImg) {
+        let hh = it.size + 4;
+        let w = hh * it.valueImg.ratio;
+        if (w > it.valueMax) { w = it.valueMax; hh = w / it.valueImg.ratio; }
+        page.drawImage(it.valueImg.img, { x: MARGIN + it.valueX, y: y - 3, width: w, height: hh });
+      }
       if (it.img) {
         const h = it.size + 3;
         const w = Math.min(h * it.img.ratio, 200);
@@ -149,20 +194,39 @@ export async function buildPackage({ tender, items, generatedDate, PDFLib, inclu
     }
   }
 
-  const coverBlocks = (starts) => [
+  // Cover values that Helvetica cannot show (Bangla tender fields or file names) are drawn by the
+  // browser onto a canvas and embedded as images, so they never degrade to "?".
+  const imgCache = new Map();
+  const imageFor = async (text) => {
+    if (!bnRenderer || !needsImage(text)) return null;
+    if (imgCache.has(text)) return imgCache.get(text);
+    let r = null;
+    try {
+      const p = await bnRenderer(String(text));
+      if (p && p.png) r = { img: await out.embedPng(p.png), ratio: p.width / p.height };
+    } catch { r = null; }
+    imgCache.set(text, r);
+    return r;
+  };
+  const tv = {};
+  for (const k of ['tender_id', 'title', 'procuring_entity', 'bidder']) tv[k] = { value: tender[k], valueImg: await imageFor(tender[k]) };
+  const docLines = [];
+  for (let i = 0; i < sources.length; i++) {
+    const s = sources[i];
+    const line = `${i + 1}. ${s.it.req.title_en} - ${s.it.file.name} (${plural(s.pages, 'page')})`;
+    docLines.push({ text: '', value: line, valueImg: await imageFor(line), valueX: 8, gap: i === 0 ? 6 : 0 });
+  }
+
+  const coverBlocks = () => [
     { text: 'Tender Document Package', size: 22, bold: true },
-    { text: 'Tender ID', bold: true, gap: 18, right: tender.tender_id },
-    { text: 'Tender title', bold: true, right: tender.title },
-    { text: 'Procuring entity', bold: true, right: tender.procuring_entity },
-    { text: 'Bidder', bold: true, right: tender.bidder },
-    { text: 'Submission deadline', bold: true, right: tender.submission_deadline },
-    { text: 'Package generated on', bold: true, right: generatedDate },
+    { text: 'Tender ID', bold: true, gap: 18, ...tv.tender_id },
+    { text: 'Tender title', bold: true, ...tv.title },
+    { text: 'Procuring entity', bold: true, ...tv.procuring_entity },
+    { text: 'Bidder', bold: true, ...tv.bidder },
+    { text: 'Submission deadline', bold: true, value: tender.submission_deadline },
+    { text: 'Package generated on', bold: true, value: generatedDate },
     { text: 'Included documents (in order)', size: 14, bold: true, gap: 20 },
-    ...sources.map((s, i) => ({
-      text: `${i + 1}. ${s.it.req.title_en} - ${s.it.file.name} (${plural(s.pages, 'page')})`,
-      gap: i === 0 ? 6 : 0,
-      indent: 8,
-    })),
+    ...docLines,
   ];
   const indexBlocks = (starts) => [
     { text: 'Index', size: 22, bold: true },
@@ -171,7 +235,7 @@ export async function buildPackage({ tender, items, generatedDate, PDFLib, inclu
   ];
 
   // Long titles can wrap, so the page counts of cover/index are computed from a dry layout.
-  const coverLaid = layoutText(coverBlocks([]), fonts);
+  const coverLaid = layoutText(coverBlocks(), fonts);
   const dryStarts = sources.map(() => 99999);
   const indexLaid = includeIndex ? layoutText(indexBlocks(dryStarts), fonts) : [];
   const plan = planPackage(sources.map((s) => s.pages), coverLaid.length, indexLaid.length);

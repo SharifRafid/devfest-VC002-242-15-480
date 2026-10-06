@@ -102,7 +102,10 @@ export function suggestMatches(requirements, files, matches) {
     }
   }
   // Ties: prefer the name that sorts last with numeric collation (e.g. *_2026 over *_2025, the newer version).
-  cands.sort((a, b) => (b.score - a.score) || b.name.localeCompare(a.name, 'en', { numeric: true }) || (a.reqId < b.reqId ? -1 : 1));
+  // Ties: prefer an original over a browser-style copy ("x (1).pdf"), then the name that sorts last
+  // with numeric collation (e.g. *_2026 over *_2025, the newer version).
+  const isCopy = (n) => (/\s\(\d+\)\.pdf$/i.test(n) ? 1 : 0);
+  cands.sort((a, b) => (b.score - a.score) || (isCopy(a.name) - isCopy(b.name)) || b.name.localeCompare(a.name, 'en', { numeric: true }) || (a.reqId < b.reqId ? -1 : 1));
   const out = [];
   const doneReq = new Set();
   for (const c of cands) {
