@@ -1,5 +1,5 @@
 I'm currently participating in a solo 90-minute vibe coding contest. Read the rule book from
-@AI_DevFest_Vibe_Coding_Rulebook.pdf and the @<Problem_Statement>.pdf problem statement that I need to solve
+@AI_DevFest_Vibe_Coding_Rulebook_pwIsanM.pdf and the @AIDevFest-ViveCoding_ProblemStatement.pdf problem statement that I need to solve
 (sample data: @<sample files, if any>). My name is Sharif Rafid Ur Rahman, my registration number is VC002-242-15-480, and my repo is
 https://github.com/sharifrafid/devfest-VC002-242-15-480 (public; only README and MIT LICENSE so far). T+0 was 05:30 PM local time,
 so the hard deadline T+90 is 07:00 PM. Check `date` whenever you plan work or commit, and tell me the elapsed time.
