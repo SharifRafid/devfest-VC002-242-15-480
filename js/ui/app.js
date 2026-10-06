@@ -9,7 +9,7 @@ import { inspectPdf, buildPackage, packageFileName } from '../core/package.js';
 import { toCsv, CSV_BOM, checklistFileName } from '../core/csv.js';
 import { $ } from './dom.js';
 import { renderAll } from './render.js';
-import { initSeal, getSealOption, sealDebug } from './seal.js';
+import { initSeal, getSealOption, sealDebug, resetSeal } from './seal.js';
 import { renderBanglaPng } from './bntext.js';
 
 export const state = {
@@ -252,16 +252,31 @@ function autoMatch() {
   else announce('check.autoNone', {}, 'info');
 }
 
+// Full reset to the very first screen: no requirements, no files, no matches, no dates, no seal.
 function resetWork() {
+  if (state.busy) { announce('files.reading', {}, 'info'); return; }
+  const f = state.files.size;
   const m = state.matches.size;
   const e = state.expiries.size;
-  const forgot = forgetSaved();
-  if (!m && !e) { announce(forgot ? 'req.reset.savedOnly' : 'req.reset.nothing', {}, 'info'); return; }
+  const hadData = !!state.data;
+  forgetSaved(); // needs state.data (tender_id), so before clearing it
+  const hadSeal = resetSeal();
+  const idx = $('opt-index');
+  const hadIdx = idx && !idx.checked;
+  if (idx) idx.checked = true;
+  const had = hadData || f || m || e || hadSeal || hadIdx || state.rejected.length || state.reqErrors.length || state.genResult;
+  state.data = null;
+  state.files = new Map();
   state.matches = new Map();
   state.expiries = new Map();
+  state.rejected = [];
+  state.reqErrors = [];
   state.genResult = null;
+  state.prevStatus = new Map();
+  restoredN = 0;
   render();
-  announce('req.reset.done', { m, e }, 'info');
+  if (!had) { announce('req.reset.nothing', {}, 'info'); return; }
+  announce('req.reset.done', { f, m, e }, 'info');
 }
 
 // ---------- save & restore (localStorage, keyed by tender_id, files by SHA-256) ----------
@@ -374,16 +389,6 @@ async function loadSample() {
   } catch {
     announce('sample.failed', {}, 'error');
   }
-}
-
-async function autoLoadRequirements() {
-  try {
-    const { manifest, base } = await fetchManifest();
-    const r = await fetch(new URL(manifest.requirements, base));
-    if (!r.ok) return;
-    const res = parseRequirements(await r.text());
-    if (res.ok && !state.data) { state.data = res.data; render(); }
-  } catch { /* first view just stays empty */ }
 }
 
 // ---------- generate ----------
@@ -505,8 +510,8 @@ function init() {
   $('btn-generate').addEventListener('click', generate);
   initSeal(announce);
 
+  // Start empty: the sample is loaded only when the user clicks "Load sample".
   render();
-  autoLoadRequirements();
 
   const qs = new URLSearchParams(location.search);
   if (qs.has('debug')) {

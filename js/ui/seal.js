@@ -107,4 +107,16 @@ export function initSeal(announce) {
   renderSeal();
 }
 
+/** Silent full reset (used by the app's Reset button). Returns true if anything was set. */
+export function resetSeal() {
+  const pages = $('seal-pages'), pos = $('seal-pos');
+  const had = !!seal.bytes || !!(pages && pages.value.trim()) || !!(pos && pos.value && pos.value !== 'br');
+  if (seal.url) URL.revokeObjectURL(seal.url);
+  seal.bytes = null; seal.name = ''; seal.url = null;
+  if (pages) pages.value = '';
+  if (pos) pos.value = 'br';
+  renderSeal();
+  return had;
+}
+
 export const sealDebug = { seal, addSeal, removeSeal };

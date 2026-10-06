@@ -31,7 +31,7 @@ There is no build step. pdf-lib is loaded from the jsDelivr CDN.
 
 | Statement | Feature |
 |---|---|
-| 4.1 Load the list | Open `requirements.json` (file picker or drag-and-drop). The app shows the tender details and the documents sorted by `order` (ties sorted by `id`). The sample loads automatically on start. **Load sample** loads the sample requirements and all sample files. Invalid JSON or schema errors are all listed, and the previous data is kept. |
+| 4.1 Load the list | Open `requirements.json` (file picker or drag-and-drop). The app shows the tender details and the documents sorted by `order` (ties sorted by `id`). The app starts empty. The sample loads only when you click **Load sample** (sample requirements and all sample files). Invalid JSON or schema errors are all listed, and the previous data is kept. |
 | 4.2 Upload files | Upload many PDFs at once (picker or drop). Each file shows its name, page count and size. Non-PDFs (wrong extension or no `%PDF-` header), empty files, more than 30 files or more than 50 MB total are rejected with a clear message. Every file has **Remove**. |
 | 4.3 Match files | Each required document has a dropdown of uploaded files. A document gets one file and a file goes to one document; picking a used file moves it. **Clear** undoes a match. |
 | 4.4 Expiry dates | A date field appears when the document has `has_expiry` and a file is matched. |
@@ -42,7 +42,7 @@ There is no build step. pdf-lib is loaded from the jsDelivr CDN.
 | 4.9 Two languages | An EN/বাংলা switch translates the whole UI, uses `title_bn`/`title_en`, sets `<html lang>` and is remembered. The PDF cover is in English, as 6.1 requires. |
 | 6.4 Footer | Each document page is extended 28 pt at the bottom with a white band, and the footer goes in that band. It never covers original content. |
 
-Also included: **Reset** (clears all matches and dates, keeps the loaded files), an aria-live status message for every action, a legend for all badges, empty/loading/error states, a `file://` notice, keyboard support and visible focus, no horizontal scroll at 360 px, and `prefers-reduced-motion`.
+Also included: **Reset**, a full start-over that clears the requirements and tender details, files, matches, dates, seal and saved work, and says what it cleared, an aria-live status message for every action, a legend for all badges, empty/loading/error states, a `file://` notice, keyboard support and visible focus, no horizontal scroll at 360 px, and `prefers-reduced-motion`.
 
 ## Bonus Features
 
