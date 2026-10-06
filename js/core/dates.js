@@ -74,3 +74,10 @@ export function monthGrid(year, month0, weekStart = 6) {
   }
   return out;
 }
+
+// Whole days from `fromIso` to `toIso` (negative when `toIso` is in the past); null if either is invalid.
+export function daysBetween(fromIso, toIso) {
+  const a = splitIso(fromIso), b = splitIso(toIso);
+  if (!a || !b) return null;
+  return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86400000);
+}

@@ -158,6 +158,9 @@ export const dict = {
     'files.opened': 'Opened {name} in a new tab.',
     'req.resetConfirm': 'Start over? This clears the requirements list, all files, matches, expiry dates, the seal and the saved work.',
     'gen.fileName': 'File name: {name}',
+    'tender.daysLeft': 'Submission deadline in {n} day(s).',
+    'tender.today': 'The submission deadline is today.',
+    'tender.passed': 'The submission deadline passed {n} day(s) ago.',
     'gen.includes': 'Documents included: {n}',
 
     'err.json.empty': 'The requirements file is empty.',
@@ -369,6 +372,9 @@ export const dict = {
     'files.opened': '{name} নতুন ট্যাবে খোলা হয়েছে।',
     'req.resetConfirm': 'নতুন করে শুরু করবেন? এতে প্রয়োজনীয় নথির তালিকা, সব ফাইল, মিল, মেয়াদের তারিখ, সিল এবং সংরক্ষিত কাজ মুছে যাবে।',
     'gen.fileName': 'ফাইলের নাম: {name}',
+    'tender.daysLeft': 'জমার শেষ তারিখ আর {n} দিন পরে।',
+    'tender.today': 'জমার শেষ তারিখ আজই।',
+    'tender.passed': 'জমার শেষ তারিখ {n} দিন আগে পেরিয়ে গেছে।',
     'gen.includes': 'অন্তর্ভুক্ত নথি: {n}টি',
 
     'err.json.empty': 'তালিকা ফাইলটি খালি।',

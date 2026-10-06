@@ -7,6 +7,7 @@ import { packageFileName } from '../core/package.js';
 import { h, clear, $ } from './dom.js';
 import { fileSelect } from './fileselect.js';
 import { datePicker } from './datepicker.js';
+import { daysBetween } from '../core/dates.js';
 import { icon, illo } from './icons.js';
 
 const DP_KEYS = ['open', 'prev', 'next', 'today', 'clear', 'placeholder', 'deadline', 'expiredHint', 'okHint', 'invalid', 'yearLabel', 'monthLabel'];
@@ -54,6 +55,13 @@ function renderRequirements(state) {
   box.append(h('h3', { text: t('tender.heading') }),
     h('dl', { class: 'tender' }, fields.map((f) => h('div', { class: 'tender-item' },
       h('dt', { text: t(`tender.${f}`) }), h('dd', { text: tn[f] })))));
+  const d = new Date();
+  const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const left = daysBetween(todayIso, tn.submission_deadline);
+  if (left !== null) {
+    const key = left > 0 ? 'tender.daysLeft' : left === 0 ? 'tender.today' : 'tender.passed';
+    box.append(h('p', { class: left < 0 ? 'deadline-note deadline-passed' : 'deadline-note', text: t(key, { n: Math.abs(left) }) }));
+  }
 }
 
 // ---------- 2. files ----------

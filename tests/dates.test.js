@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseUserDate, monthGrid, addDays, addMonths, weekdayOf, normalizeDigits } from '../js/core/dates.js';
+import { parseUserDate, monthGrid, addDays, addMonths, weekdayOf, normalizeDigits, daysBetween } from '../js/core/dates.js';
 
 test('parseUserDate accepts supported formats and validates real dates', () => {
   assert.equal(parseUserDate('2026-10-20'), '2026-10-20');
@@ -37,4 +37,12 @@ test('addDays and addMonths', () => {
   assert.equal(addMonths('2026-01-15', -1), '2025-12-15');
   assert.equal(addMonths('2026-11-30', 14), '2028-01-30');
   assert.equal(addDays('bad', 1), null);
+});
+
+test('daysBetween counts whole days, negative in the past, null when invalid', () => {
+  assert.equal(daysBetween('2026-10-06', '2026-10-20'), 14);
+  assert.equal(daysBetween('2026-10-20', '2026-10-20'), 0);
+  assert.equal(daysBetween('2026-10-21', '2026-10-20'), -1);
+  assert.equal(daysBetween('2026-12-31', '2027-01-01'), 1);
+  assert.equal(daysBetween('bad', '2026-10-20'), null);
 });

@@ -42,7 +42,7 @@ There is no build step. pdf-lib 1.17.1 is bundled in `vendor/` (the jsDelivr CDN
 | 4.9 Two languages | An EN/বাংলা switch translates the whole UI, uses `title_bn`/`title_en`, sets `<html lang>` and is remembered. The PDF cover is in English, as 6.1 requires. |
 | 6.4 Footer | Each document page is extended 28 pt at the bottom with a white band, and the footer goes in that band. It never covers original content. |
 
-Also included: **Open** on every file (shows the PDF in a new tab, so an unclear scan like `scan_0042.pdf` can be identified before matching), a note listing the optional documents that will be left out of the package, **Reset** (with a confirmation step), a full start-over that clears the requirements and tender details, files, matches, dates, seal and saved work, and says what it cleared, an aria-live status message for every action, a legend for all badges, empty/loading/error states, a `file://` notice, keyboard support and visible focus, no horizontal scroll at 360 px, and `prefers-reduced-motion`.
+Also included: a note under the tender details saying how many days remain until the submission deadline (or that it has passed), **Open** on every file (shows the PDF in a new tab, so an unclear scan like `scan_0042.pdf` can be identified before matching), a note listing the optional documents that will be left out of the package, **Reset** (with a confirmation step), a full start-over that clears the requirements and tender details, files, matches, dates, seal and saved work, and says what it cleared, an aria-live status message for every action, a legend for all badges, empty/loading/error states, a `file://` notice, keyboard support and visible focus, no horizontal scroll at 360 px, and `prefers-reduced-motion`.
 
 ## Bonus Features
 

@@ -367,3 +367,7 @@ details.seal[open] > summary { margin-bottom: 6px; }
 
 /* File row actions (Open + Remove) */
 .file-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+
+/* Deadline note under the tender details */
+.deadline-note { margin-top: 8px; font-weight: 600; color: var(--muted); }
+.deadline-passed { color: var(--bad-fg); }
