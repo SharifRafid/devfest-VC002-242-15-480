@@ -1,0 +1,8 @@
+.env*
+.vercel/
+.netlify/
+node_modules/
+.DS_Store
+INIT_PROMPT.md
+*_Rulebook_*.pdf
+AIDevFest-ViveCoding_ProblemStatement.pdf
